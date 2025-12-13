@@ -1,3 +1,1 @@
-# erestaurant
-# tuitiontracker
 # InclusiveEducationAssistant
