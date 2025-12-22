@@ -1,5 +1,7 @@
 from enum import Enum, auto
-
+class InputMode(Enum):
+    CURSOR = auto()
+    KEYBOARD = auto()
 class GazeDirection(Enum):
     LEFT = auto()
     RIGHT = auto()
@@ -20,6 +22,9 @@ class Action(Enum):
     MOVE_DOWN = auto()
     SELECT = auto()
     OPEN_KEYBOARD = auto()
+    CLOSE_KEYBOARD=auto()
+    KEYBOARD_ROTATE = auto()
+    KEYBOARD_SELECT = auto()
     SWITCH_TAB = auto()
     HELP_ALERT = auto()
     NONE = auto()

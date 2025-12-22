@@ -1,19 +1,35 @@
-from PyQt6.QtWidgets import QWidget, QVBoxLayout, QLabel, QPushButton
-from app.state.app_state import AppState
+from PyQt6.QtWidgets import QWidget
+from PyQt6.QtGui import QPainter, QColor
+from PyQt6.QtCore import Qt
+
 
 class CalibrationScreen(QWidget):
-    def __init__(self, main_window):
-        super().__init__()
-        self.main_window = main_window
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.dot_x = None  # normalized [0,1]
+        self.dot_y = None  # normalized [0,1]
 
-        layout = QVBoxLayout()
-        layout.addWidget(QLabel("CALIBRATION SCREEN"))
+    def show_dot(self, x_norm, y_norm):
+        """
+        x_norm, y_norm ∈ [0,1]
+        """
+        self.dot_x = x_norm
+        self.dot_y = y_norm
+        self.update()
 
-        btn = QPushButton("Calibration Done")
-        btn.clicked.connect(self.go_next)
+    def paintEvent(self, event):
+        if self.dot_x is None or self.dot_y is None:
+            return
 
-        layout.addWidget(btn)
-        self.setLayout(layout)
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
 
-    def go_next(self):
-        self.main_window.switch_state(AppState.HOME)
+        w = self.width()
+        h = self.height()
+
+        cx = int(self.dot_x * w)
+        cy = int(self.dot_y * h)
+
+        painter.setBrush(QColor(255, 0, 0))
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.drawEllipse(cx - 10, cy - 10, 20, 20)
