@@ -19,7 +19,7 @@ class GazeKalman:
         ], dtype=np.float32)
 
         # Tune these two for smoothness vs responsiveness
-        self.kf.processNoiseCov = np.eye(4, dtype=np.float32) * 0.003
+        self.kf.processNoiseCov = np.eye(4, dtype=np.float32) * 0.002
         self.kf.measurementNoiseCov = np.eye(2, dtype=np.float32) * 0.30
 
         self.kf.errorCovPost = np.eye(4, dtype=np.float32)

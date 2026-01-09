@@ -83,8 +83,17 @@ class MainWindow(QMainWindow):
         ]
         self.calib_index = 0
         self.calib_start_time = None
-        self.CALIB_SETTLE = 0.3
-        self.CALIB_COLLECT = 1.2
+        self.CALIB_SETTLE = 0.5
+        self.CALIB_COLLECT = 2.0
+        # Cursor state (normalized)
+        self.cursor_x = 0.5
+        self.cursor_y = 0.5
+
+        # Feel controls
+        self.CURSOR_GAIN = 0.085    # responsiveness
+        self.DEAD_RADIUS_X = 0.03
+        self.DEAD_RADIUS_Y = 0.06
+
 
         # ---------------- TIMER ----------------
         self.timer = QTimer()
@@ -111,6 +120,7 @@ class MainWindow(QMainWindow):
 
         eyes = self.face_mesh.get_eye_landmarks(frame)
         if not eyes:
+            
             return
 
         self.real_blink = self.blink_detector.update(
@@ -144,17 +154,38 @@ class MainWindow(QMainWindow):
 
                 if self.calib_index >= len(self.calibration_points):
                     self.gaze_calibration.finalize()
+
+                    # 🔴 STEP 4: RESET CURSOR TO CALIBRATED CENTER
+                    self.cursor_x = self.gaze_calibration.center_screen_x
+                    self.cursor_y = self.gaze_calibration.center_screen_y
+
                     self.switch_state(AppState.HOME)
-            return
+                return
+
 
         mapped = self.gaze_calibration.map(gx, gy)
-        if mapped:
-            cx, cy = mapped
+        if mapped is None:
+            return
+        
+        cx, cy = mapped
 
-            # ---- KALMAN SMOOTHING ----
-            sx, sy = self.gaze_smoother.smooth(cx, cy)
+        # ---------- DEAD ZONE ----------
+        dx = cx - self.gaze_calibration.center_screen_x
+        dy = cy - self.gaze_calibration.center_screen_y
 
-            self.cursor_controller.move_to(sx, sy)
+        if abs(dx) < self.DEAD_RADIUS_X:
+            cx = self.gaze_calibration.center_screen_x
+        if abs(dy) < self.DEAD_RADIUS_Y:
+            cy = self.gaze_calibration.center_screen_y
+
+            # ---------- VELOCITY DAMPING ----------
+        self.cursor_x += (cx - self.cursor_x) * self.CURSOR_GAIN
+        self.cursor_y += (cy - self.cursor_y) * self.CURSOR_GAIN
+
+            # ---------- KALMAN ----------
+        sx, sy = self.gaze_smoother.smooth(self.cursor_x, self.cursor_y)
+
+        self.cursor_controller.move_to(sx, sy)
 
 
         # ---------------- BLINK SELECT ----------------
