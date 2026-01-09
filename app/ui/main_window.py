@@ -17,6 +17,11 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.setWindowTitle("Assistive Eye App")
         self.setGeometry(100, 100, 1200, 800)
+        self.setStyleSheet("""
+            QMainWindow {
+                background-color:black;
+            }
+        """)
 
 
         self.current_state = AppState.LOGIN
@@ -81,6 +86,7 @@ class MainWindow(QMainWindow):
                 self.dwell_manager.reset()
 
     def update_input(self):
+        
         action = self.input_manager.update(
             gaze=self.fake_gaze,
             blink=self.fake_blink,
