@@ -20,6 +20,7 @@ from core.vision.face_mesh import FaceMeshDetector
 from core.vision.blink_detector import BlinkDetector
 from core.vision.gaze_estimator import GazeEstimator
 from core.vision.gaze_calibration import GazeCalibration
+from core.ml.eye_state_cnn import EyeStateCNN
 
 
 class MainWindow(QMainWindow):
@@ -67,7 +68,13 @@ class MainWindow(QMainWindow):
         self.camera.start()
 
         self.face_mesh = FaceMeshDetector()
-        self.blink_detector = BlinkDetector()
+        # ---------------- CNN ----------------
+        self.eye_cnn = EyeStateCNN(
+            "assets/models/eye_closed_model.keras"
+        )
+
+        self.blink_detector = BlinkDetector(self.eye_cnn)
+
         self.gaze_estimator = GazeEstimator()
         self.gaze_calibration = GazeCalibration()
 
@@ -90,9 +97,9 @@ class MainWindow(QMainWindow):
         self.cursor_y = 0.5
 
         # Feel controls
-        self.CURSOR_GAIN = 0.085    # responsiveness
-        self.DEAD_RADIUS_X = 0.03
-        self.DEAD_RADIUS_Y = 0.06
+        self.CURSOR_GAIN = 0.14    # responsiveness
+        self.DEAD_RADIUS_X = 0.02
+        self.DEAD_RADIUS_Y = 0.04
 
 
         # ---------------- TIMER ----------------
@@ -123,11 +130,11 @@ class MainWindow(QMainWindow):
             
             return
 
+        # 🔧 FIX: Pass BOTH eye images to blink detector
         self.real_blink = self.blink_detector.update(
-            eyes["left_eye"],
-            eyes["right_eye"]
+            left_eye_img=eyes["left_eye_img"],
+            right_eye_img=eyes["right_eye_img"]
         )
-
         gx, gy = self.gaze_estimator.estimate(
             eyes["left_eye"],
             eyes["right_eye"],

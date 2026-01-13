@@ -1,62 +1,44 @@
-import math
 import time
 from core.input.input_events import BlinkType
 
 class BlinkDetector:
-    def __init__(self):
-        self.EAR_THRESHOLD = 0.22
-        self.LONG_BLINK_TIME = 0.8  # seconds
+    def __init__(self, eye_cnn):
+        self.eye_cnn = eye_cnn
 
-        self.eye_closed = False
-        self.blink_start_time = None
+        self.closed_since = None
+        self.last_blink_time = 0
 
-    def _euclidean(self, p1, p2):
-        return math.dist(p1, p2)
+        self.SINGLE_MAX = 0.35
+        self.LONG_MIN = 0.6
+        self.COOLDOWN = 0.5
 
-    def compute_ear(self, eye_points):
-        """
-        eye_points: list of 6 (x, y) tuples
-        """
-        p1, p2, p3, p4, p5, p6 = eye_points
+    def update(self, left_eye_img, right_eye_img):
+        now = time.time()
 
-        vertical = (
-            self._euclidean(p2, p6) +
-            self._euclidean(p3, p5)
-        )
-        horizontal = 2.0 * self._euclidean(p1, p4)
+        left_p = self.eye_cnn.predict_prob(left_eye_img)
+        right_p = self.eye_cnn.predict_prob(right_eye_img)
 
-        if horizontal == 0:
-            return 0.0
+        p_avg = (left_p + right_p) / 2
+        closed = p_avg > 0.65
 
-        return vertical / horizontal
-
-    def update(self, left_eye, right_eye):
-        """
-        Called every frame.
-        Returns BlinkType or BlinkType.NONE
-        """
-        left_ear = self.compute_ear(left_eye)
-        right_ear = self.compute_ear(right_eye)
-        ear = (left_ear + right_ear) / 2.0
-
-        current_time = time.time()
-
-        # ---- EYE CLOSED ----
-        if ear < self.EAR_THRESHOLD:
-            if not self.eye_closed:
-                self.eye_closed = True
-                self.blink_start_time = current_time
+        if closed:
+            if self.closed_since is None:
+                self.closed_since = now
             return BlinkType.NONE
 
-        # ---- EYE OPEN ----
-        if self.eye_closed:
-            duration = current_time - self.blink_start_time
-            self.eye_closed = False
-            self.blink_start_time = None
+        # eye opened
+        if self.closed_since is not None:
+            duration = now - self.closed_since
+            self.closed_since = None
 
-            if duration >= self.LONG_BLINK_TIME:
-                return BlinkType.LONG
-            else:
+            if now - self.last_blink_time < self.COOLDOWN:
+                return BlinkType.NONE
+
+            self.last_blink_time = now
+
+            if duration < self.SINGLE_MAX:
                 return BlinkType.SINGLE
+            if duration >= self.LONG_MIN:
+                return BlinkType.LONG
 
         return BlinkType.NONE
