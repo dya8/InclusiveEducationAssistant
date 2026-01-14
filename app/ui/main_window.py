@@ -132,8 +132,10 @@ class MainWindow(QMainWindow):
 
         # 🔧 FIX: Pass BOTH eye images to blink detector
         self.real_blink = self.blink_detector.update(
-            left_eye_img=eyes["left_eye_img"],
-            right_eye_img=eyes["right_eye_img"]
+            eyes["left_eye_img"],
+            eyes["right_eye_img"],
+            eyes["left_eye"],
+            eyes["right_eye"]
         )
         gx, gy = self.gaze_estimator.estimate(
             eyes["left_eye"],

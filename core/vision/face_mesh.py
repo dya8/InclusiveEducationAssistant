@@ -97,10 +97,11 @@ class FaceMeshDetector:
             return None
 
         return {
-            "left_eye": left_eye,
-            "right_eye": right_eye,
+            "left_eye_pts": left_eye,      # list[(x,y)]
+            "right_eye_pts": right_eye,
             "left_eye_img": left_eye_img,
             "right_eye_img": right_eye_img,
             "left_iris": left_iris,
             "right_iris": right_iris
         }
+

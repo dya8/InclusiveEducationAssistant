@@ -11,7 +11,7 @@ class EyeStateCNN:
             tileGridSize=(8, 8)
         )
 
-        self.CLOSED_THRESHOLD = 0.6
+        self.CLOSED_THRESHOLD = 0.85
 
     def preprocess(self, eye_img):
         if len(eye_img.shape) == 3:
@@ -26,9 +26,10 @@ class EyeStateCNN:
 
     def is_closed(self, eye_img):
         x = self.preprocess(eye_img)
-        p_closed = float(self.model.predict(x, verbose=0)[0][0])
-        print(f"P(closed): {p_closed:.3f}")
-        return p_closed > self.CLOSED_THRESHOLD
+        p = float(self.model.predict(x, verbose=0)[0][0])
+        return p > 0.5
+
+
     
     def predict_prob(self, eye_img):
         x = self.preprocess(eye_img)
