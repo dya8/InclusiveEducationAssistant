@@ -27,4 +27,5 @@ class Action(Enum):
     KEYBOARD_SELECT = auto()
     SWITCH_TAB = auto()
     HELP_ALERT = auto()
+    BACK = auto()
     NONE = auto()

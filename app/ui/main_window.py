@@ -1,8 +1,8 @@
 from PyQt6.QtWidgets import QMainWindow, QWidget, QStackedLayout
-from PyQt6.QtCore import QTimer, Qt
+from PyQt6.QtCore import QTimer
 import time
-from core.vision.gaze_smoother import GazeKalman
 
+from core.vision.gaze_smoother import GazeKalman
 from app.state.app_state import AppState
 from app.ui.login_screen import LoginScreen
 from app.ui.calibration_screen import CalibrationScreen
@@ -10,7 +10,7 @@ from app.ui.home_screen import HomeScreen
 from app.ui.widgets.eye_cursor import EyeCursor
 from app.ui.widgets.rotating_keyboard import RotatingKeyboard
 from app.ui.cursor_controller import CursorController
-
+from app.ui.widgets.keyboard_icon import KeyboardIcon
 from core.input.input_events import Action, BlinkType
 from core.input.input_manager import InputManager
 from core.input.dwell_manager import DwellManager
@@ -38,8 +38,14 @@ class MainWindow(QMainWindow):
         self.login_screen = LoginScreen(self)
         self.calibration_screen = CalibrationScreen(self)
         self.home_screen = HomeScreen(self)
+        self.keyboard_icon = KeyboardIcon(self)
+        self.keyboard_icon.move(900,500)
+        self.keyboard_icon.show()
+
+        self.keyboard_icon.raise_()
 
         self.focusables = self.home_screen.focusables
+        self.focusables.append(self.keyboard_icon)
         self.current_focus = None
         self.dwell_manager = DwellManager()
 
@@ -55,7 +61,6 @@ class MainWindow(QMainWindow):
 
         self.rotating_keyboard = RotatingKeyboard(self)
         self.rotating_keyboard.setGeometry(0, 0, self.width(), self.height())
-        self.gaze_smoother = GazeKalman()
 
         self.switch_state(AppState.LOGIN)
 
@@ -68,17 +73,15 @@ class MainWindow(QMainWindow):
         self.camera.start()
 
         self.face_mesh = FaceMeshDetector()
-        # ---------------- CNN ----------------
+
         self.eye_cnn = EyeStateCNN(
             "assets/models/eye_closed_model.keras"
         )
-
         self.blink_detector = BlinkDetector(self.eye_cnn)
 
         self.gaze_estimator = GazeEstimator()
         self.gaze_calibration = GazeCalibration()
-
-        self.real_blink = BlinkType.NONE
+        self.gaze_smoother = GazeKalman()
 
         # ---------------- CALIBRATION ----------------
         self.calibration_points = [
@@ -92,15 +95,13 @@ class MainWindow(QMainWindow):
         self.calib_start_time = None
         self.CALIB_SETTLE = 0.5
         self.CALIB_COLLECT = 2.0
-        # Cursor state (normalized)
+
         self.cursor_x = 0.5
         self.cursor_y = 0.5
 
-        # Feel controls
-        self.CURSOR_GAIN = 0.14    # responsiveness
+        self.CURSOR_GAIN = 0.14
         self.DEAD_RADIUS_X = 0.02
         self.DEAD_RADIUS_Y = 0.04
-
 
         # ---------------- TIMER ----------------
         self.timer = QTimer()
@@ -127,16 +128,17 @@ class MainWindow(QMainWindow):
 
         eyes = self.face_mesh.get_eye_landmarks(frame)
         if not eyes:
-            
             return
 
-        # 🔧 FIX: Pass BOTH eye images to blink detector
-        self.real_blink = self.blink_detector.update(
+        # ---------- BLINK ----------
+        blink = self.blink_detector.update(
             eyes["left_eye_img"],
             eyes["right_eye_img"],
             eyes["left_eye"],
             eyes["right_eye"]
         )
+
+        # ---------- GAZE ----------
         gx, gy = self.gaze_estimator.estimate(
             eyes["left_eye"],
             eyes["right_eye"],
@@ -144,7 +146,7 @@ class MainWindow(QMainWindow):
             eyes["right_iris"]
         )
 
-        # ---------------- CALIBRATION MODE ----------------
+        # ---------- CALIBRATION ----------
         if self.current_state == AppState.CALIBRATION:
             label, x, y = self.calibration_points[self.calib_index]
 
@@ -163,22 +165,17 @@ class MainWindow(QMainWindow):
 
                 if self.calib_index >= len(self.calibration_points):
                     self.gaze_calibration.finalize()
-
-                    # 🔴 STEP 4: RESET CURSOR TO CALIBRATED CENTER
                     self.cursor_x = self.gaze_calibration.center_screen_x
                     self.cursor_y = self.gaze_calibration.center_screen_y
-
                     self.switch_state(AppState.HOME)
                 return
 
-
+        # ---------- CURSOR ----------
         mapped = self.gaze_calibration.map(gx, gy)
         if mapped is None:
             return
-        
-        cx, cy = mapped
 
-        # ---------- DEAD ZONE ----------
+        cx, cy = mapped
         dx = cx - self.gaze_calibration.center_screen_x
         dy = cy - self.gaze_calibration.center_screen_y
 
@@ -187,22 +184,44 @@ class MainWindow(QMainWindow):
         if abs(dy) < self.DEAD_RADIUS_Y:
             cy = self.gaze_calibration.center_screen_y
 
-            # ---------- VELOCITY DAMPING ----------
         self.cursor_x += (cx - self.cursor_x) * self.CURSOR_GAIN
         self.cursor_y += (cy - self.cursor_y) * self.CURSOR_GAIN
 
-            # ---------- KALMAN ----------
         sx, sy = self.gaze_smoother.smooth(self.cursor_x, self.cursor_y)
-
         self.cursor_controller.move_to(sx, sy)
 
+        # ---------- ACTION ----------
+        action = self.input_manager.update(
+            gaze=None,     # gaze actions come later
+            blink=blink
+        )
 
-        # ---------------- BLINK SELECT ----------------
-        if self.real_blink == BlinkType.SINGLE and self.current_focus:
-            self.current_focus.select()
+        # DEBUG (remove after verification)
+        print("ACTION:", action)
+
+        self.handle_action(action)
+        self.update_focus()
+
+    # =====================================================
+
+    def handle_action(self, action: Action):
+        if action == Action.NONE:
+            return
+
+        if action == Action.SELECT and self.current_focus:
+            result = self.current_focus.select()
             self.dwell_manager.reset()
 
-        self.update_focus()
+            if result == Action.OPEN_KEYBOARD:
+                self.rotating_keyboard.show()
+            elif result == Action.CLOSE_KEYBOARD:
+                self.rotating_keyboard.hide()
+
+        elif action == Action.BACK:
+            self.rotating_keyboard.hide()
+
+        elif action == Action.OPEN_KEYBOARD:
+            self.rotating_keyboard.show()
 
     # =====================================================
 
@@ -223,9 +242,10 @@ class MainWindow(QMainWindow):
                 hit.set_focus(True)
             self.dwell_manager.reset()
 
-        if hit:
+        if hit and not isinstance(hit, KeyboardIcon):
             progress, selected = self.dwell_manager.update(hit)
             hit.update_dwell(progress)
             if selected:
                 hit.select()
                 self.dwell_manager.reset()
+
