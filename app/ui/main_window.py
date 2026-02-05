@@ -21,6 +21,11 @@ from core.vision.blink_detector import BlinkDetector
 from core.vision.gaze_estimator import GazeEstimator
 from core.vision.gaze_calibration import GazeCalibration
 
+import os
+import cv2
+from datetime import datetime
+
+
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -37,6 +42,10 @@ class MainWindow(QMainWindow):
         self.login_screen = LoginScreen(self)
         self.calibration_screen = CalibrationScreen(self)
         self.home_screen = HomeScreen(self)
+        # ---- LOGIN SIGNALS ----
+        self.login_screen.login_success.connect(self.on_login_success)
+        self.login_screen.new_user_detected.connect(self.on_new_user)
+
 
         self.focusables = self.home_screen.focusables
         self.current_focus = None
@@ -112,6 +121,69 @@ class MainWindow(QMainWindow):
             self.layout.setCurrentWidget(self.home_screen)
 
     # =====================================================
+    def save_new_user_face(self, frame):
+    # Create base directory if not exists
+
+        base_dir = os.path.join("assets", "faces")
+        os.makedirs(base_dir, exist_ok=True)
+
+        # Determine next user_id
+        existing_users = [
+            d for d in os.listdir(base_dir)
+            if d.startswith("user_")
+        ]
+
+        next_id = len(existing_users) + 1
+        user_id = f"user_{next_id:03d}"
+
+        user_dir = os.path.join(base_dir, user_id)
+        os.makedirs(user_dir, exist_ok=True)
+
+        # Save image
+        filename = f"img1.jpg"
+        filepath = os.path.join(user_dir, filename)
+
+        cv2.imwrite(filepath, frame)
+
+        print(f"[NEW USER] Saved face for {user_id} at {filepath}")
+
+        return user_id
+
+    
+    
+    
+    
+    
+    
+    
+    # =====================================================
+    
+    
+    def on_login_success(self, user_id):
+        print(f"[MainWindow] Login successful: {user_id}")
+         # Store user if needed
+        AppState.current_user = user_id  # optional
+        self.switch_state(AppState.CALIBRATION)
+        self.calib_index = 0
+        self.calib_start_time = None
+    def on_new_user(self):
+        print("New user detected")
+
+        # Get current frame from login screen
+        frame = self.login_screen.current_frame
+
+        if frame is not None:
+            user_id = self.save_new_user_face(frame)
+            print("Registered new user:", user_id)
+        else:
+            print("Warning: No frame captured for new user")
+
+        # Reset calibration state
+        self.calib_index = 0
+        self.calib_start_time = None
+
+        # Move to calibration
+        self.switch_state(AppState.CALIBRATION)
 
     def update_input(self):
         frame = self.camera.get_frame()
