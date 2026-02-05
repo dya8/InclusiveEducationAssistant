@@ -1,7 +1,8 @@
 from PyQt6.QtWidgets import QMainWindow, QWidget, QStackedLayout
 from PyQt6.QtCore import QTimer
 import time
-
+from app.ui.notes_screen import NotesScreen
+from PyQt6.QtCore import QRect
 from core.vision.gaze_smoother import GazeKalman
 from app.state.app_state import AppState
 from app.ui.login_screen import LoginScreen
@@ -52,6 +53,8 @@ class MainWindow(QMainWindow):
         self.layout.addWidget(self.login_screen)
         self.layout.addWidget(self.calibration_screen)
         self.layout.addWidget(self.home_screen)
+        self.notes_screen = NotesScreen(self)
+        self.layout.addWidget(self.notes_screen)
 
         self.container.setLayout(self.layout)
         self.setCentralWidget(self.container)
@@ -99,9 +102,10 @@ class MainWindow(QMainWindow):
         self.cursor_x = 0.5
         self.cursor_y = 0.5
 
-        self.CURSOR_GAIN = 0.14
-        self.DEAD_RADIUS_X = 0.02
-        self.DEAD_RADIUS_Y = 0.04
+        self.CURSOR_GAIN_X = 0.14
+        self.CURSOR_GAIN_Y = 0.07
+        self.DEAD_RADIUS_X = 0.025
+        self.DEAD_RADIUS_Y = 0.07
 
         # ---------------- TIMER ----------------
         self.timer = QTimer()
@@ -112,12 +116,31 @@ class MainWindow(QMainWindow):
 
     def switch_state(self, state):
         self.current_state = state
+
         if state == AppState.LOGIN:
             self.layout.setCurrentWidget(self.login_screen)
+
         elif state == AppState.CALIBRATION:
             self.layout.setCurrentWidget(self.calibration_screen)
+
         elif state == AppState.HOME:
             self.layout.setCurrentWidget(self.home_screen)
+            self.focusables = self.home_screen.focusables
+            self.current_focus = None
+
+        elif state == AppState.NOTES:
+            self.layout.setCurrentWidget(self.notes_screen)
+
+            # 🔑 SHOW INPUT CHOICE IMMEDIATELY
+            self.notes_screen.choice_overlay.show()
+            self.notes_screen.choice_overlay.raise_()
+
+            self.focusables = self.notes_screen.choice_overlay.focusables
+            self.current_focus = None
+            self.dwell_manager.reset()
+
+
+
 
     # =====================================================
 
@@ -169,6 +192,20 @@ class MainWindow(QMainWindow):
                     self.cursor_y = self.gaze_calibration.center_screen_y
                     self.switch_state(AppState.HOME)
                 return
+        # ---------- FREEZE CURSOR WHEN KEYBOARD IS OPEN ----------
+        if self.rotating_keyboard.isVisible():
+            # Still process blink + actions, but DO NOT move cursor
+            action = self.input_manager.update(
+                gaze=None,
+                blink=blink
+            )
+
+            # 🔑 FIX: normalize keyboard select
+            if action == Action.KEYBOARD_SELECT:
+                action = Action.SELECT
+
+            self.handle_action(action)
+
 
         # ---------- CURSOR ----------
         mapped = self.gaze_calibration.map(gx, gy)
@@ -178,17 +215,24 @@ class MainWindow(QMainWindow):
         cx, cy = mapped
         dx = cx - self.gaze_calibration.center_screen_x
         dy = cy - self.gaze_calibration.center_screen_y
-
         if abs(dx) < self.DEAD_RADIUS_X:
             cx = self.gaze_calibration.center_screen_x
         if abs(dy) < self.DEAD_RADIUS_Y:
             cy = self.gaze_calibration.center_screen_y
 
-        self.cursor_x += (cx - self.cursor_x) * self.CURSOR_GAIN
-        self.cursor_y += (cy - self.cursor_y) * self.CURSOR_GAIN
 
-        sx, sy = self.gaze_smoother.smooth(self.cursor_x, self.cursor_y)
-        self.cursor_controller.move_to(sx, sy)
+        
+
+        dx_s, dy_s = self.gaze_smoother.smooth(
+            cx - self.cursor_x,
+            cy - self.cursor_y
+        )
+
+        self.cursor_x += dx_s * self.CURSOR_GAIN_X
+        self.cursor_y += dy_s * self.CURSOR_GAIN_Y
+
+        self.cursor_controller.move_to(self.cursor_x, self.cursor_y)
+
 
         # ---------- ACTION ----------
         action = self.input_manager.update(
@@ -201,6 +245,7 @@ class MainWindow(QMainWindow):
 
         self.handle_action(action)
         self.update_focus()
+        
 
     # =====================================================
 
@@ -208,20 +253,72 @@ class MainWindow(QMainWindow):
         if action == Action.NONE:
             return
 
-        if action == Action.SELECT and self.current_focus:
+        # ---------- ROTATING KEYBOARD (ABSOLUTE PRIORITY) ----------
+        if self.rotating_keyboard.isVisible():
+
+            if action == Action.SELECT:
+                result = self.rotating_keyboard.select_current()
+                self.input_manager.last_action_time = time.time()
+
+                # 👇 THIS WAS THE MISSING PART
+                if result == Action.CLOSE_KEYBOARD:
+                    self.rotating_keyboard.close()
+
+                return
+
+            if action == Action.BACK:
+                self.input_manager.last_action_time = time.time()
+                self.rotating_keyboard.close()
+                return
+
+            return  # swallow all actions
+
+
+        # ---------- GLOBAL LONG-BLINK ----------
+        if action == Action.OPEN_KEYBOARD:
+            self.input_manager.last_action_time = time.time()
+            self.rotating_keyboard.open()
+            return
+
+        # ---------- OPEN NOTES ----------
+        if action == Action.OPEN_NOTES:
+            self.switch_state(AppState.NOTES)
+            self.dwell_manager.reset()
+            return
+
+        # ---------- INPUT CHOICE OVERLAY ----------
+        if (
+            action == Action.SELECT
+            and self.current_state == AppState.NOTES
+            and self.notes_screen.choice_overlay.isVisible()
+            and self.current_focus
+        ):
             result = self.current_focus.select()
             self.dwell_manager.reset()
 
             if result == Action.OPEN_KEYBOARD:
-                self.rotating_keyboard.show()
-            elif result == Action.CLOSE_KEYBOARD:
-                self.rotating_keyboard.hide()
+                self.notes_screen.choice_overlay.hide()
+                self.notes_screen.keyboard.show()
+                self.notes_screen.typing_active = True
+                self.focusables = self.notes_screen.keyboard.focusables
+                self.current_focus = None
+                return
 
-        elif action == Action.BACK:
-            self.rotating_keyboard.hide()
+            if result == Action.VOICE_INPUT:
+                self.notes_screen.choice_overlay.hide()
+                self.notes_screen.start_voice_input()
+                print("VOICE INPUT SELECTED")
+                return
 
-        elif action == Action.OPEN_KEYBOARD:
-            self.rotating_keyboard.show()
+        # ---------- NORMAL UI ----------
+        if action == Action.SELECT and self.current_focus:
+            result = self.current_focus.select()
+            self.dwell_manager.reset()
+
+            if result == Action.OPEN_NOTES:
+                self.switch_state(AppState.NOTES)
+                return
+
 
     # =====================================================
 
@@ -230,9 +327,14 @@ class MainWindow(QMainWindow):
         hit = None
 
         for w in self.focusables:
-            if w.geometry().contains(cursor_pos):
+            global_rect = QRect(
+                w.mapToGlobal(w.rect().topLeft()),
+                w.size()
+            )
+
+            if global_rect.contains(cursor_pos):
                 hit = w
-                break
+                break   # 🔴 THIS WAS MISSING
 
         if hit != self.current_focus:
             if self.current_focus:
@@ -248,4 +350,3 @@ class MainWindow(QMainWindow):
             if selected:
                 hit.select()
                 self.dwell_manager.reset()
-

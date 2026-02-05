@@ -20,7 +20,7 @@ class FocusableWidget(QWidget):
 
     def select(self):
         print("SELECTED:", self.objectName())
-
+        return None
     def paintEvent(self, event):
         super().paintEvent(event)
         if self.focused:

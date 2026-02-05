@@ -29,3 +29,5 @@ class Action(Enum):
     HELP_ALERT = auto()
     BACK = auto()
     NONE = auto()
+    OPEN_NOTES = auto()
+    VOICE_INPUT = auto()

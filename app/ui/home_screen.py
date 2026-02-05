@@ -1,22 +1,33 @@
-from PyQt6.QtWidgets import QWidget, QVBoxLayout, QLabel
+from PyQt6.QtWidgets import QWidget, QLabel
+from PyQt6.QtCore import Qt
 from app.ui.widgets.test_button import TestButton
 
 
 class HomeScreen(QWidget):
     def __init__(self, main_window):
-        super().__init__()
+        super().__init__(main_window)
+        self.setFixedSize(1200, 800)
 
-        layout = QVBoxLayout()
-        layout.addWidget(QLabel("HOME SCREEN"))
-        layout.addWidget(QLabel("• Take Notes"))
-        layout.addWidget(QLabel("• Coding"))
-        layout.addWidget(QLabel("• View Materials"))
-        self.btn1 = TestButton("Take Notes", self)
-        self.btn1.move(100, 100)
-        self.btn1.setObjectName("TakeNotes")
+        # ---------- TITLE ----------
+        title = QLabel("HOME", self)
+        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        title.setStyleSheet("font-size: 32px; font-weight: bold;")
+        title.setGeometry(0, 40, 1200, 50)
 
-        self.btn2 = TestButton("Coding", self)
-        self.btn2.move(100, 200)
-        self.btn2.setObjectName("Coding")
-        self.focusables = [self.btn1, self.btn2]
-        self.setLayout(layout)
+        # ---------- TAKE NOTES ----------
+        self.btn_notes = TestButton("TAKE NOTES", self)
+        self.btn_notes.setObjectName("TakeNotes")
+        self.btn_notes.resize(300, 120)
+        self.btn_notes.move(450, 250)
+
+        # ---------- CODING ----------
+        self.btn_coding = TestButton("CODING", self)
+        self.btn_coding.setObjectName("Coding")
+        self.btn_coding.resize(300, 120)
+        self.btn_coding.move(450, 420)
+
+        # ---------- FOCUSABLES ----------
+        self.focusables = [
+            self.btn_notes,
+            self.btn_coding
+        ]
