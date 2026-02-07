@@ -2,6 +2,10 @@ import cv2
 from PyQt6.QtWidgets import QWidget, QPushButton, QLabel, QVBoxLayout
 from PyQt6.QtCore import QTimer, pyqtSignal
 from PyQt6.QtGui import QImage, QPixmap
+from PyQt6.QtWidgets import QMessageBox
+from PyQt6.QtCore import QTimer
+
+
 
 from core.vision.face_auth import FaceAuthenticator
 
@@ -56,12 +60,38 @@ class LoginScreen(QWidget):
         self.video_label.setPixmap(QPixmap.fromImage(qt_image))
 
     def scan_face(self):
+        # Disable scan button immediately
+        self.scan_button.setEnabled(False)
+
         user_id = self.authenticator.authenticate(self.current_frame)
 
+        msg = QMessageBox(self)
+        msg.setStandardButtons(QMessageBox.StandardButton.NoButton)
+
         if user_id:
-            self.login_success.emit(user_id)
+            msg.setWindowTitle("Login Successful")
+            msg.setText(f"Welcome back!\nUser ID: {user_id}")
+
+            # When popup closes → proceed
+            msg.finished.connect(lambda _: self.login_success.emit(user_id))
+
         else:
-            self.new_user_detected.emit()
+            msg.setWindowTitle("New User Detected")
+            msg.setText(
+                "New user detected.\nRegistering and proceeding to calibration."
+            )
+
+            msg.finished.connect(lambda _: self.new_user_detected.emit())
+
+        # Auto-close popup after 1 second
+        QTimer.singleShot(5000, msg.accept)
+
+        # Re-enable scan button AFTER popup is closed
+        msg.finished.connect(lambda _: self.scan_button.setEnabled(True))
+
+        msg.show()
+
+
 
     def closeEvent(self, event):
         self.timer.stop()
