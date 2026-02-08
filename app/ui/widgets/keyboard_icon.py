@@ -5,7 +5,7 @@ from core.input.input_events import Action
 class KeyboardIcon(QLabel):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setFixedSize(120, 120)
+        self.setFixedSize(0, 0)
         self.setText("⌨")
         self.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.setStyleSheet("background:#333; color:white; border-radius:10px;")

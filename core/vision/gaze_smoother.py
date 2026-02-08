@@ -36,3 +36,7 @@ class GazeKalman:
         filtered = self.kf.correct(measurement)
 
         return float(filtered[0]), float(filtered[1])
+    def reset(self):
+        self.kf.statePost = None
+        self.initialized = False
+

@@ -15,6 +15,7 @@ from app.ui.widgets.keyboard_icon import KeyboardIcon
 from core.input.input_events import Action, BlinkType
 from core.input.input_manager import InputManager
 from core.input.dwell_manager import DwellManager
+from app.ui.widgets.mic_button import MicButton
 
 from core.vision.camera import CameraManager
 from core.vision.face_mesh import FaceMeshDetector
@@ -39,11 +40,11 @@ class MainWindow(QMainWindow):
         self.login_screen = LoginScreen(self)
         self.calibration_screen = CalibrationScreen(self)
         self.home_screen = HomeScreen(self)
+        
         self.keyboard_icon = KeyboardIcon(self)
-        self.keyboard_icon.move(900,500)
-        self.keyboard_icon.show()
-
-        self.keyboard_icon.raise_()
+        #self.keyboard_icon.move(900,500)
+        #self.keyboard_icon.show()
+        #self.keyboard_icon.raise_()
 
         self.focusables = self.home_screen.focusables
         self.focusables.append(self.keyboard_icon)
@@ -102,8 +103,8 @@ class MainWindow(QMainWindow):
         self.cursor_x = 0.5
         self.cursor_y = 0.5
 
-        self.CURSOR_GAIN_X = 0.14
-        self.CURSOR_GAIN_Y = 0.07
+        self.CURSOR_GAIN_X = 0.10
+        self.CURSOR_GAIN_Y = 0.05
         self.DEAD_RADIUS_X = 0.025
         self.DEAD_RADIUS_Y = 0.07
 
@@ -115,6 +116,10 @@ class MainWindow(QMainWindow):
     # =====================================================
 
     def switch_state(self, state):
+        if self.current_state == AppState.NOTES:
+            self.notes_screen.mic_button.hide()
+            self.notes_screen.voice_active = False
+
         self.current_state = state
 
         if state == AppState.LOGIN:
@@ -193,7 +198,7 @@ class MainWindow(QMainWindow):
                     self.switch_state(AppState.HOME)
                 return
         # ---------- FREEZE CURSOR WHEN KEYBOARD IS OPEN ----------
-        if self.rotating_keyboard.isVisible():
+        if self.rotating_keyboard.isVisible() and self.rotating_keyboard.active:
             # Still process blink + actions, but DO NOT move cursor
             action = self.input_manager.update(
                 gaze=None,
@@ -205,6 +210,7 @@ class MainWindow(QMainWindow):
                 action = Action.SELECT
 
             self.handle_action(action)
+            return
 
 
         # ---------- CURSOR ----------
@@ -242,37 +248,79 @@ class MainWindow(QMainWindow):
 
         # DEBUG (remove after verification)
         print("ACTION:", action)
-
-        self.handle_action(action)
         self.update_focus()
+
+
+        #THIS IS THE ONLY SELECTION LOGIC
+        if action == Action.SELECT and self.current_focus:
+           result = self.current_focus.select()
+           self.handle_action(result)
+           self.dwell_manager.reset()
+           return
         
+        self.handle_action(action)
+        
+    def restore_normal_input(self):
+        if self.current_state == AppState.HOME:
+            self.focusables = self.home_screen.focusables
+
+        elif self.current_state == AppState.NOTES:
+
+            # 🎤 VOICE MODE ACTIVE
+            if self.notes_screen.mic_button.isVisible():
+                self.focusables = [self.notes_screen.mic_button]
+
+            # ⌨️ TYPING MODE ACTIVE
+            elif self.notes_screen.typing_active:
+                self.focusables = self.notes_screen.keyboard.focusables
+
+            # 📋 CHOICE OVERLAY
+            else:
+                self.focusables = self.notes_screen.choice_overlay.focusables
+
+        self.current_focus = None
+        self.dwell_manager.reset()
+
 
     # =====================================================
 
     def handle_action(self, action: Action):
         if action == Action.NONE:
             return
-
         # ---------- ROTATING KEYBOARD (ABSOLUTE PRIORITY) ----------
-        if self.rotating_keyboard.isVisible():
+        if self.rotating_keyboard.isVisible() :
 
             if action == Action.SELECT:
                 result = self.rotating_keyboard.select_current()
-                self.input_manager.last_action_time = time.time()
 
                 # 👇 THIS WAS THE MISSING PART
                 if result == Action.CLOSE_KEYBOARD:
                     self.rotating_keyboard.close()
+                    self.input_manager.force_cursor_mode()          # 🔑 REQUIRED
+                    self.restore_normal_input()
 
                 return
 
             if action == Action.BACK:
-                self.input_manager.last_action_time = time.time()
+                #self.input_manager.last_action_time = time.time()
                 self.rotating_keyboard.close()
+                self.input_manager.force_cursor_mode()              # 🔑 REQUIRED
+                self.restore_normal_input()
                 return
 
             return  # swallow all actions
+        
+        # ==================================================
+        # VOICE INPUT BLINK TOGGLE (START / STOP)
+        # ==================================================
+        if (
+            action == Action.VOICE_TOGGLE
+            and self.current_state == AppState.NOTES
+        ):
+            self.notes_screen.toggle_voice_input()
+            return
 
+        
 
         # ---------- GLOBAL LONG-BLINK ----------
         if action == Action.OPEN_KEYBOARD:
@@ -287,7 +335,7 @@ class MainWindow(QMainWindow):
             return
 
         # ---------- INPUT CHOICE OVERLAY ----------
-        if (
+        '''if (
             action == Action.SELECT
             and self.current_state == AppState.NOTES
             and self.notes_screen.choice_overlay.isVisible()
@@ -306,18 +354,70 @@ class MainWindow(QMainWindow):
 
             if result == Action.VOICE_INPUT:
                 self.notes_screen.choice_overlay.hide()
-                self.notes_screen.start_voice_input()
-                print("VOICE INPUT SELECTED")
-                return
+
+                # show mic button
+                self.notes_screen.mic_button.show()
+                self.notes_screen.mic_button.raise_()
+
+                # update focusables → ONLY mic button
+                self.focusables = [self.notes_screen.mic_button]
+                self.current_focus = None
+                self.dwell_manager.reset()
+
+                return'''
+        # ==================================================
+        # HANDLE SELECT RESULTS (NO SELECTING HERE)
+        # ==================================================
+
+        if action == Action.OPEN_KEYBOARD:
+            self.notes_screen.choice_overlay.hide()
+            self.notes_screen.keyboard.show()
+            self.notes_screen.typing_active = True
+            self.focusables = self.notes_screen.keyboard.focusables
+            self.current_focus = None
+            self.dwell_manager.reset()
+            return
+
+        if action == Action.VOICE_INPUT:
+            self.notes_screen.choice_overlay.hide()
+            self.notes_screen.mic_button.show()
+            self.notes_screen.mic_button.raise_()
+            self.focusables = [self.notes_screen.mic_button]
+            self.current_focus = None
+            self.dwell_manager.reset()
+            return
+
+
 
         # ---------- NORMAL UI ----------
-        if action == Action.SELECT and self.current_focus:
+        '''if action == Action.SELECT and self.current_focus:
             result = self.current_focus.select()
             self.dwell_manager.reset()
 
             if result == Action.OPEN_NOTES:
                 self.switch_state(AppState.NOTES)
+                return'''
+        # ---------- GENERIC SELECT HANDLER ----------
+        if action == Action.SELECT and self.current_focus:
+            result = self.current_focus.select()
+            self.dwell_manager.reset()
+
+            # 🔑 KEYBOARD OUTPUT (CHAR, SPACE, BACK, DONE)
+            if (
+                self.current_state == AppState.NOTES
+                and self.notes_screen.typing_active
+                and isinstance(action, tuple)
+            ):
+                kb_action, value = action
+                self.notes_screen.handle_keyboard_action(kb_action, value)
                 return
+
+            # ---------- NORMAL ACTION ----------
+            if action == Action.OPEN_NOTES:
+                self.switch_state(AppState.NOTES)
+                return
+
+            action = result
 
 
     # =====================================================
@@ -345,8 +445,5 @@ class MainWindow(QMainWindow):
             self.dwell_manager.reset()
 
         if hit and not isinstance(hit, KeyboardIcon):
-            progress, selected = self.dwell_manager.update(hit)
+            progress, _ = self.dwell_manager.update(hit)
             hit.update_dwell(progress)
-            if selected:
-                hit.select()
-                self.dwell_manager.reset()

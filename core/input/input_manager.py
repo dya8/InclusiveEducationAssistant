@@ -86,3 +86,9 @@ class InputManager:
                     return gaze_to_action[gaze]
 
         return Action.NONE
+    def reset(self):
+        self.last_action_time = 0
+    def force_cursor_mode(self):
+        self.mode = InputMode.CURSOR
+        self.last_action_time = 0
+

@@ -35,11 +35,13 @@ class RotatingKeyboard(QWidget):
         self.show()
         self.raise_()
         self.selected_index = 0
+        self.parent().gaze_smoother.reset()
 
     def close(self):
         self.active = False
         self.hide()
         reset_tts()
+        self.parent().gaze_smoother.reset()
 
     def rotate(self):
         if not self.isVisible() or not self.active:
@@ -99,3 +101,5 @@ class RotatingKeyboard(QWidget):
             painter.setFont(QFont("Arial", 12, QFont.Weight.Bold))
             painter.setPen(Qt.GlobalColor.black)
             painter.drawText(QPoint(int(tx - 25), int(ty + 5)), label)
+    
+
