@@ -386,6 +386,15 @@ class MainWindow(QMainWindow):
             self.current_focus = None
             self.dwell_manager.reset()
             return
+        if action == Action.OPEN_TYPING_KEYBOARD:
+            self.notes_screen.choice_overlay.hide()
+            self.notes_screen.keyboard.show()
+            self.notes_screen.typing_active = True
+
+            self.focusables = self.notes_screen.keyboard.focusables
+            self.current_focus = None
+            self.dwell_manager.reset()
+            return
 
 
 

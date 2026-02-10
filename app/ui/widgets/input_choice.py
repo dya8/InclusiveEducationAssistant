@@ -24,7 +24,7 @@ class InputChoiceOverlay(QWidget):
         super().__init__(parent)
 
         self.voice_btn = ChoiceButton("VOICE INPUT", Action.VOICE_INPUT, self)
-        self.keyboard_btn = ChoiceButton("KEYBOARD INPUT", Action.OPEN_KEYBOARD, self)
+        self.keyboard_btn = ChoiceButton("KEYBOARD INPUT", Action.OPEN_TYPING_KEYBOARD, self)
 
         # manual positioning (IMPORTANT)
         self.voice_btn.move(0, 0)

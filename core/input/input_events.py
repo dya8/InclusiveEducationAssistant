@@ -23,6 +23,8 @@ class Action(Enum):
     SELECT = auto()
     OPEN_KEYBOARD = auto()
     CLOSE_KEYBOARD=auto()
+    OPEN_TYPING_KEYBOARD =auto()
+    CLOSE_TYPING_KEYBOARD=auto()
     KEYBOARD_ROTATE = auto()
     KEYBOARD_SELECT = auto()
     SWITCH_TAB = auto()

@@ -11,7 +11,7 @@ class MicButton(FocusableWidget):
         self.label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.label.setStyleSheet("font-size: 22px;")
 
-        self.resize(360, 360)
+        self.resize(700, 700)
         self.recording = False
 
     def set_recording(self, recording: bool):
