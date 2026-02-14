@@ -13,7 +13,7 @@ from app.ui.widgets.typing_keyboard import TypingKeyboard
 from core.audio.stt import VoiceWorker
 from app.ui.widgets.mic_button import MicButton
 from core.input.input_events import Action
-
+from app.ui.widgets.back_button import BackButton
 
 class NotesScreen(QWidget):
     def __init__(self, parent=None):
@@ -93,6 +93,10 @@ class NotesScreen(QWidget):
 
         # ---------- FLAGS ----------
         self.typing_active = False
+        self.back_button = BackButton(self)
+        self.back_button.move(20, 20)
+        self.back_button.show()
+
 
     # ==================================================
     # TEXT

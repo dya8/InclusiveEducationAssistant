@@ -70,11 +70,12 @@ class MainWindow(QMainWindow):
         self.rotating_keyboard = RotatingKeyboard(self)
         self.rotating_keyboard.setGeometry(0, 0, self.width(), self.height())
 
-        self.switch_state(AppState.LOGIN)
-
+        
         # ---------------- INPUT ----------------
         self.input_manager = InputManager()
         self.cursor_controller = CursorController(self.eye_cursor)
+
+        self.switch_state(AppState.LOGIN)
 
         # ---------------- CAMERA & VISION ----------------
         self.camera = CameraManager()
@@ -134,7 +135,7 @@ class MainWindow(QMainWindow):
 
         elif state == AppState.HOME:
             self.layout.setCurrentWidget(self.home_screen)
-            self.focusables = self.home_screen.focusables
+            self.focusables = list(self.home_screen.focusables)
             self.current_focus = None
 
         elif state == AppState.NOTES:
@@ -144,10 +145,14 @@ class MainWindow(QMainWindow):
             self.notes_screen.choice_overlay.show()
             self.notes_screen.choice_overlay.raise_()
 
-            self.focusables = self.notes_screen.choice_overlay.focusables
+            self.focusables = (
+            list(self.notes_screen.choice_overlay.focusables)
+            + [self.notes_screen.back_button]
+            )
+
             self.current_focus = None
             self.dwell_manager.reset()
-
+        self.input_manager.reset()
     def save_new_user_face(self, frame):
     # Create base directory if not exists
 
@@ -183,7 +188,7 @@ class MainWindow(QMainWindow):
         self.switch_state(AppState.CALIBRATION)
         self.calib_index = 0
         self.calib_start_time = None
-        
+
     def on_new_user(self):
         print("New user detected")
 
@@ -323,7 +328,7 @@ class MainWindow(QMainWindow):
 
             # 🎤 VOICE MODE ACTIVE
             if self.notes_screen.mic_button.isVisible():
-                self.focusables = [self.notes_screen.mic_button]
+                self.focusables = [self.notes_screen.mic_button,self.notes_screen.back_button]
 
             # ⌨️ TYPING MODE ACTIVE
             elif self.notes_screen.typing_active:
@@ -342,6 +347,66 @@ class MainWindow(QMainWindow):
     def handle_action(self, action: Action):
         if action == Action.NONE:
             return
+        # ==================================================
+        # BACK BUTTON (GLOBAL)
+        # ==================================================
+        
+        if action == Action.BACK:
+            # Always clear current focus highlight first
+            if self.current_focus:
+                self.current_focus.set_focus(False)
+            self.current_focus = None
+            self.dwell_manager.reset()
+            # 1️⃣ If rotating keyboard open → close it only
+            if self.rotating_keyboard.isVisible():
+                self.rotating_keyboard.close()
+                self.input_manager.force_cursor_mode()
+                self.input_manager.reset()
+                self.restore_normal_input()
+                return
+
+            # 2️⃣ If inside NOTES → handle internal navigation
+            if self.current_state == AppState.NOTES:
+
+                # Typing keyboard active → go back to choice overlay
+                if self.notes_screen.typing_active:
+                    self.notes_screen.keyboard.hide()
+                    self.notes_screen.typing_active = False
+
+                    self.notes_screen.choice_overlay.show()
+                    self.notes_screen.choice_overlay.raise_()
+
+                    self.focusables = self.notes_screen.choice_overlay.focusables
+                    self.current_focus = None
+                    self.input_manager.force_cursor_mode()
+                    self.input_manager.reset()
+                    return
+
+                # Voice input page → go back to choice overlay
+                if self.notes_screen.mic_button.isVisible():
+                    self.notes_screen.mic_button.hide()
+                    self.notes_screen.mic_label.hide()
+                    self.notes_screen.voice_active = False
+
+                    self.notes_screen.choice_overlay.show()
+                    self.notes_screen.choice_overlay.raise_()
+
+                    self.focusables = self.notes_screen.choice_overlay.focusables
+                    self.current_focus = None
+                    self.input_manager.force_cursor_mode()
+                    self.input_manager.reset()
+                    return
+
+                # If already in choice overlay → go HOME
+                if self.notes_screen.choice_overlay.isVisible():
+                    self.switch_state(AppState.HOME)
+                    self.input_manager.force_cursor_mode()
+                    self.input_manager.reset()
+                    return
+                
+                return
+
+
         # ---------- ROTATING KEYBOARD (ABSOLUTE PRIORITY) ----------
         if self.rotating_keyboard.isVisible() :
 
@@ -389,37 +454,7 @@ class MainWindow(QMainWindow):
             self.dwell_manager.reset()
             return
 
-        # ---------- INPUT CHOICE OVERLAY ----------
-        '''if (
-            action == Action.SELECT
-            and self.current_state == AppState.NOTES
-            and self.notes_screen.choice_overlay.isVisible()
-            and self.current_focus
-        ):
-            result = self.current_focus.select()
-            self.dwell_manager.reset()
-
-            if result == Action.OPEN_KEYBOARD:
-                self.notes_screen.choice_overlay.hide()
-                self.notes_screen.keyboard.show()
-                self.notes_screen.typing_active = True
-                self.focusables = self.notes_screen.keyboard.focusables
-                self.current_focus = None
-                return
-
-            if result == Action.VOICE_INPUT:
-                self.notes_screen.choice_overlay.hide()
-
-                # show mic button
-                self.notes_screen.mic_button.show()
-                self.notes_screen.mic_button.raise_()
-
-                # update focusables → ONLY mic button
-                self.focusables = [self.notes_screen.mic_button]
-                self.current_focus = None
-                self.dwell_manager.reset()
-
-                return'''
+        
         # ==================================================
         # HANDLE SELECT RESULTS (NO SELECTING HERE)
         # ==================================================
@@ -437,7 +472,7 @@ class MainWindow(QMainWindow):
             self.notes_screen.choice_overlay.hide()
             self.notes_screen.mic_button.show()
             self.notes_screen.mic_button.raise_()
-            self.focusables = [self.notes_screen.mic_button]
+            self.focusables = [self.notes_screen.mic_button,self.notes_screen.back_button]
             self.current_focus = None
             self.dwell_manager.reset()
             return
@@ -452,15 +487,6 @@ class MainWindow(QMainWindow):
             return
 
 
-
-        # ---------- NORMAL UI ----------
-        '''if action == Action.SELECT and self.current_focus:
-            result = self.current_focus.select()
-            self.dwell_manager.reset()
-
-            if result == Action.OPEN_NOTES:
-                self.switch_state(AppState.NOTES)
-                return'''
         # ---------- GENERIC SELECT HANDLER ----------
         if action == Action.SELECT and self.current_focus:
             result = self.current_focus.select()
