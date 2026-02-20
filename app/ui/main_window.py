@@ -119,8 +119,69 @@ class MainWindow(QMainWindow):
         self.timer.start(30)
 
     # =====================================================
-
     def switch_state(self, state):
+        # 🔥 Always clear focus properly
+        if self.current_focus:
+            self.current_focus.set_focus(False)
+
+        self.current_focus = None
+        self.dwell_manager.reset()
+        self.input_manager.force_cursor_mode()
+        #self.input_manager.reset()
+
+        # 🔥 If leaving NOTES → fully clean its UI
+        if self.current_state == AppState.NOTES:
+            self.notes_screen.mic_button.hide()
+            self.notes_screen.mic_label.hide()
+            self.notes_screen.voice_active = False
+            self.notes_screen.typing_active = False
+            self.notes_screen.keyboard.hide()
+            self.notes_screen.choice_overlay.hide()
+
+        self.current_state = state
+
+        # ===============================
+        # LOGIN
+        # ===============================
+        if state == AppState.LOGIN:
+            self.layout.setCurrentWidget(self.login_screen)
+            return
+
+        # ===============================
+        # CALIBRATION
+        # ===============================
+        if state == AppState.CALIBRATION:
+            self.layout.setCurrentWidget(self.calibration_screen)
+            return
+
+        # ===============================
+        # HOME
+        # ===============================
+        if state == AppState.HOME:
+            self.layout.setCurrentWidget(self.home_screen)
+            self.focusables = list(self.home_screen.focusables)
+
+            # 🔥 Critical: fresh list reference
+            self.focusables = list(self.home_screen.focusables)
+            return
+
+        # ===============================
+        # NOTES
+        # ===============================
+        if state == AppState.NOTES:
+            self.layout.setCurrentWidget(self.notes_screen)
+
+            self.notes_screen.choice_overlay.show()
+            self.notes_screen.choice_overlay.raise_()
+
+            self.focusables = (
+                list(self.notes_screen.choice_overlay.focusables)
+                + [self.notes_screen.back_button]
+            )
+            return
+
+
+    '''def switch_state(self, state):
         if self.current_state == AppState.NOTES:
             self.notes_screen.mic_button.hide()
             self.notes_screen.voice_active = False
@@ -152,7 +213,7 @@ class MainWindow(QMainWindow):
 
             self.current_focus = None
             self.dwell_manager.reset()
-        self.input_manager.reset()
+        self.input_manager.reset()'''
     def save_new_user_face(self, frame):
     # Create base directory if not exists
 
@@ -310,7 +371,8 @@ class MainWindow(QMainWindow):
         print("ACTION:", action)
         self.update_focus()
 
-
+        #print("RAW ACTION:", action)
+        #print("CURRENT FOCUS:", type(self.current_focus))
         #THIS IS THE ONLY SELECTION LOGIC
         if action == Action.SELECT and self.current_focus:
            result = self.current_focus.select()
@@ -336,7 +398,10 @@ class MainWindow(QMainWindow):
 
             # 📋 CHOICE OVERLAY
             else:
-                self.focusables = self.notes_screen.choice_overlay.focusables
+                self.focusables = (
+                    list(self.notes_screen.choice_overlay.focusables)
+                    + [self.notes_screen.back_button]
+                )
 
         self.current_focus = None
         self.dwell_manager.reset()
@@ -361,7 +426,7 @@ class MainWindow(QMainWindow):
             if self.rotating_keyboard.isVisible():
                 self.rotating_keyboard.close()
                 self.input_manager.force_cursor_mode()
-                self.input_manager.reset()
+                #self.input_manager.reset()
                 self.restore_normal_input()
                 return
 
@@ -376,10 +441,13 @@ class MainWindow(QMainWindow):
                     self.notes_screen.choice_overlay.show()
                     self.notes_screen.choice_overlay.raise_()
 
-                    self.focusables = self.notes_screen.choice_overlay.focusables
+                    self.focusables = (
+                        list(self.notes_screen.choice_overlay.focusables)
+                        + [self.notes_screen.back_button]
+                    )
                     self.current_focus = None
                     self.input_manager.force_cursor_mode()
-                    self.input_manager.reset()
+                    #self.input_manager.reset()
                     return
 
                 # Voice input page → go back to choice overlay
@@ -391,17 +459,20 @@ class MainWindow(QMainWindow):
                     self.notes_screen.choice_overlay.show()
                     self.notes_screen.choice_overlay.raise_()
 
-                    self.focusables = self.notes_screen.choice_overlay.focusables
+                    self.focusables = (
+                        list(self.notes_screen.choice_overlay.focusables)
+                        + [self.notes_screen.back_button]
+                    )
                     self.current_focus = None
                     self.input_manager.force_cursor_mode()
-                    self.input_manager.reset()
+                    #self.input_manager.reset()
                     return
 
                 # If already in choice overlay → go HOME
                 if self.notes_screen.choice_overlay.isVisible():
                     self.switch_state(AppState.HOME)
                     self.input_manager.force_cursor_mode()
-                    self.input_manager.reset()
+                    #self.input_manager.reset()
                     return
                 
                 return
