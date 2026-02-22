@@ -37,9 +37,9 @@ class NotesScreen(QWidget):
         self.choice_overlay.hide()
 
         # ---------- KEYBOARD ----------
-        self.keyboard = TypingKeyboard(self)
-        self.keyboard.hide()
-        layout.addWidget(self.keyboard)
+        #self.keyboard = TypingKeyboard(self)
+        #self.keyboard.hide()
+        #layout.addWidget(self.keyboard)
 
         self.setLayout(layout)
 
@@ -89,14 +89,29 @@ class NotesScreen(QWidget):
         #====typing keyboard===
         self.keyboard = TypingKeyboard(self)
         self.keyboard.hide()
-        layout.addWidget(self.keyboard)
+        self.keyboard.setGeometry(0, 0, self.width(), self.height())
 
         # ---------- FLAGS ----------
         self.typing_active = False
         self.back_button = BackButton(self)
         self.back_button.move(20, 20)
         self.back_button.show()
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
 
+        # Make keyboard always full screen
+        self.keyboard.setGeometry(0, 0, self.width(), self.height())
+
+        # Optional: reposition mic button
+        self.mic_button.move(
+            (self.width() - 360) // 2,
+            self.height() - 140
+        )
+
+        self.mic_label.move(
+            (self.width() - self.mic_label.width()) // 2,
+            self.height() - 200
+        )
 
     # ==================================================
     # TEXT

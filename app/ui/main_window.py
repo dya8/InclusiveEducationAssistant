@@ -373,12 +373,46 @@ class MainWindow(QMainWindow):
 
         #print("RAW ACTION:", action)
         #print("CURRENT FOCUS:", type(self.current_focus))
+        print("SELECT DETECTED")
+        print("Current focus:", self.current_focus)
         #THIS IS THE ONLY SELECTION LOGIC
-        if action == Action.SELECT and self.current_focus:
+        '''if action == Action.SELECT and self.current_focus:
            result = self.current_focus.select()
            self.handle_action(result)
            self.dwell_manager.reset()
-           return
+           return'''
+        if action == Action.SELECT and self.current_focus:
+            result = self.current_focus.select()
+            self.dwell_manager.reset()
+
+            # 🔥 If typing mode active
+            if (
+                self.current_state == AppState.NOTES
+                and self.notes_screen.typing_active
+            ):
+                kb_action, value = result
+
+                internal_action, internal_value = self.notes_screen.keyboard.handle_key(kb_action, value)
+
+                # refresh focusables after rebuild
+                self.focusables = (
+                    list(self.notes_screen.keyboard.focusables)
+                    + [self.notes_screen.back_button]
+                )
+
+                self.current_focus = None
+                self.dwell_manager.reset()
+
+                # If text key pressed
+                if internal_action:
+                    self.notes_screen.handle_keyboard_action(internal_action, internal_value)
+
+                return
+
+            # 🔥 Normal UI
+            if isinstance(result, Action):
+                self.handle_action(result)
+            return
         
         self.handle_action(action)
         
@@ -394,7 +428,7 @@ class MainWindow(QMainWindow):
 
             # ⌨️ TYPING MODE ACTIVE
             elif self.notes_screen.typing_active:
-                self.focusables = self.notes_screen.keyboard.focusables
+                self.focusables = list(self.notes_screen.keyboard.focusables) + [self.notes_screen.back_button]
 
             # 📋 CHOICE OVERLAY
             else:
@@ -550,9 +584,10 @@ class MainWindow(QMainWindow):
         if action == Action.OPEN_TYPING_KEYBOARD:
             self.notes_screen.choice_overlay.hide()
             self.notes_screen.keyboard.show()
+            self.notes_screen.keyboard.raise_()
             self.notes_screen.typing_active = True
-
-            self.focusables = self.notes_screen.keyboard.focusables
+            self.notes_screen.keyboard.build_group_mode()
+            self.focusables = list(self.notes_screen.keyboard.focusables) + [self.notes_screen.back_button]
             self.current_focus = None
             self.dwell_manager.reset()
             return
@@ -563,24 +598,38 @@ class MainWindow(QMainWindow):
             result = self.current_focus.select()
             self.dwell_manager.reset()
 
-            # 🔑 KEYBOARD OUTPUT (CHAR, SPACE, BACK, DONE)
+            # 🔥 If in typing mode
             if (
                 self.current_state == AppState.NOTES
                 and self.notes_screen.typing_active
-                and isinstance(action, tuple)
             ):
-                kb_action, value = action
-                self.notes_screen.handle_keyboard_action(kb_action, value)
+                # result may be Action or tuple
+                if isinstance(result, tuple):
+                    kb_action, value = result
+                else:
+                    kb_action, value = result, None
+
+                # 🔥 Let keyboard process it
+                internal_action, internal_value = self.notes_screen.keyboard.handle_key(kb_action, value)
+
+                # 🔥 Refresh focusables after rebuild
+                self.focusables = (
+                    list(self.notes_screen.keyboard.focusables)
+                    + [self.notes_screen.back_button]
+                )
+                self.current_focus = None
+                self.dwell_manager.reset()
+
+                # 🔥 If it's a text action → send to notes
+                if internal_action:
+                    self.notes_screen.handle_keyboard_action(internal_action, internal_value)
+
                 return
 
-            # ---------- NORMAL ACTION ----------
-            if action == Action.OPEN_NOTES:
-                self.switch_state(AppState.NOTES)
+            # 🔥 Otherwise normal action
+            if isinstance(result, Action):
+                self.handle_action(result)
                 return
-
-            action = result
-
-
     # =====================================================
 
     def update_focus(self):
