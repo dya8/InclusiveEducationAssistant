@@ -25,7 +25,7 @@ from core.vision.blink_detector import BlinkDetector
 from core.vision.gaze_estimator import GazeEstimator
 from core.vision.gaze_calibration import GazeCalibration
 from core.ml.eye_state_cnn import EyeStateCNN
-
+from app.ui.coding_screen import CodingScreen
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -117,7 +117,10 @@ class MainWindow(QMainWindow):
         self.timer = QTimer()
         self.timer.timeout.connect(self.update_input)
         self.timer.start(30)
-
+        #----------------CODING SCREEN----------------
+        self.coding_screen = CodingScreen(self)
+        self.layout.addWidget(self.coding_screen)
+        
     # =====================================================
 
     def switch_state(self, state):
@@ -138,6 +141,12 @@ class MainWindow(QMainWindow):
             self.focusables = list(self.home_screen.focusables)
             self.current_focus = None
 
+        elif state == AppState.CODING:
+            self.layout.setCurrentWidget(self.coding_screen)
+            self.focusables = list(self.coding_screen.focusables)
+            self.current_focus = None
+            self.dwell_manager.reset()
+
         elif state == AppState.NOTES:
             self.layout.setCurrentWidget(self.notes_screen)
 
@@ -153,6 +162,7 @@ class MainWindow(QMainWindow):
             self.current_focus = None
             self.dwell_manager.reset()
         self.input_manager.reset()
+        
     def save_new_user_face(self, frame):
     # Create base directory if not exists
 
@@ -268,6 +278,9 @@ class MainWindow(QMainWindow):
             # 🔑 FIX: normalize keyboard select
             if action == Action.KEYBOARD_SELECT:
                 action = Action.SELECT
+                
+            if action == Action.OPEN_CODING:
+                self.switch_state(AppState.CODING)
 
             self.handle_action(action)
             return
@@ -345,6 +358,7 @@ class MainWindow(QMainWindow):
     # =====================================================
 
     def handle_action(self, action: Action):
+        print("Handling action:", action)
         if action == Action.NONE:
             return
         # ==================================================
@@ -453,6 +467,11 @@ class MainWindow(QMainWindow):
             self.switch_state(AppState.NOTES)
             self.dwell_manager.reset()
             return
+            # ---------- OPEN CODING ----------
+        if action == Action.OPEN_CODING:
+            self.switch_state(AppState.CODING)
+            self.dwell_manager.reset()
+            return
 
         
         # ==================================================
@@ -508,6 +527,25 @@ class MainWindow(QMainWindow):
                 return
 
             action = result
+        # ---------- CODING ----------
+        if action == Action.RUN_CODE:
+            if self.current_state == AppState.CODING:
+                self.coding_screen.run_code()
+            return
+
+        if action == Action.CLEAR_OUTPUT:
+            if self.current_state == AppState.CODING:
+                self.coding_screen.clear_output()
+            return
+
+        if action == Action.INSERT_SNIPPET:
+            if self.current_state == AppState.CODING and self.current_focus:
+                self.coding_screen.handle_snippet(self.current_focus)
+            return
+        if action == Action.BACK:
+            if self.current_state == AppState.CODING:
+                self.switch_state(AppState.HOME)
+                return
 
 
     # =====================================================

@@ -32,6 +32,11 @@ class Action(Enum):
     BACK = auto()
     NONE = auto()
     OPEN_NOTES = auto()
+    OPEN_CODING = auto()
+    RUN_CODE = auto()
+    CLEAR_OUTPUT = auto()
+    INSERT_SNIPPET = auto()
+
     VOICE_INPUT = auto()
     VOICE_TOGGLE = auto()
     INSERT_CHAR = auto()
