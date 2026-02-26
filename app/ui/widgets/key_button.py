@@ -22,11 +22,19 @@ class KeyButton(FocusableWidget):
 
         self.label = QLabel(text, self)
         self.label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.label.setStyleSheet(
+        '''self.label.setStyleSheet(
             "font-size: 22px; border: 2px solid white;"
-        )
+        )'''
+        self.label.setStyleSheet("""
+            font-size: 26px;
+    font-weight: 500;
+    border: 1px solid #c8c8c8;
+    border-radius: 10px;
+    background-color: white;
+    color: #222;
+        """)
 
-        self.resize(180, 100)
+        self.resize(200, 110)
 
     def select(self):
         return self.action, self.value

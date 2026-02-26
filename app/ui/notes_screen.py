@@ -2,7 +2,8 @@ from PyQt6.QtWidgets import (
     QWidget,
     QVBoxLayout,
     QTextEdit,
-    QLabel
+    QLabel,
+    QHBoxLayout
 )
 from PyQt6.QtCore import Qt
 
@@ -21,16 +22,38 @@ class NotesScreen(QWidget):
 
         # ---------- LAYOUT ----------
         layout = QVBoxLayout()
-
+        layout.setContentsMargins(60, 24, 60, 30)
+        layout.setSpacing(15)
+        # Header row
+        header_layout = QHBoxLayout()
+        header_layout.setSpacing(20)
+        self.back_button = BackButton(self)
         title = QLabel("Take Notes")
         title.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        title.setStyleSheet("font-size: 24px;")
-
+        title.setStyleSheet("""
+            font-size: 34px;
+            font-weight: 600;
+            color: #222;
+        """)
+        header_layout.addWidget(self.back_button, alignment=Qt.AlignmentFlag.AlignLeft)
+        header_layout.addStretch()
+        header_layout.addWidget(title)
+        header_layout.addStretch()
+        layout.addLayout(header_layout)
         self.text_area = QTextEdit()
         self.text_area.setReadOnly(True)
-
-        layout.addWidget(title)
-        layout.addWidget(self.text_area)
+        self.text_area.setMinimumHeight(220)
+        self.text_area.setStyleSheet("""
+            QTextEdit {
+                font-size: 28px;
+                padding: 20px;
+                border: 2px solid #444;
+                border-radius: 12px;
+                color: white;
+            }
+        """)
+        
+        layout.addWidget(self.text_area,stretch=4)
 
         # ---------- INPUT CHOICE ----------
         self.choice_overlay = InputChoiceOverlay(self)
@@ -41,7 +64,7 @@ class NotesScreen(QWidget):
         #self.keyboard.hide()
         #layout.addWidget(self.keyboard)
 
-        self.setLayout(layout)
+        
 
         # ---------- FOCUS ----------
         self.text_focus = NotesFocusArea(self.text_area, self)
@@ -88,9 +111,10 @@ class NotesScreen(QWidget):
 
         #====typing keyboard===
         self.keyboard = TypingKeyboard(self)
+        self.keyboard.setMinimumHeight(650)
         self.keyboard.hide()
-        self.keyboard.setGeometry(0, 0, self.width(), self.height())
-
+        layout.addWidget(self.keyboard, stretch=5)
+        self.setLayout(layout)
         # ---------- FLAGS ----------
         self.typing_active = False
         self.back_button = BackButton(self)
@@ -98,10 +122,17 @@ class NotesScreen(QWidget):
         self.back_button.show()
     def resizeEvent(self, event):
         super().resizeEvent(event)
+        print("Keyboard height:", self.keyboard.height())
+        # Center overlay
+        overlay_width = 500
+        overlay_height = 140
+        self.choice_overlay.move(
+            (self.width() - overlay_width) // 2,
+            int(self.height() * 0.4)
+        )
 
-        # Make keyboard always full screen
-        self.keyboard.setGeometry(0, 0, self.width(), self.height())
-
+        # Back button stays top-left
+        self.back_button.move(30, 20)
         # Optional: reposition mic button
         self.mic_button.move(
             (self.width() - 360) // 2,
@@ -119,7 +150,7 @@ class NotesScreen(QWidget):
 
     def add_text(self, text: str):
         if text.strip():
-            self.text_area.insertPlainText(text + " ")
+            self.text_area.insertPlainText(text)
 
         # ==================================================
     # VOICE INPUT (BLINK TOGGLE)
