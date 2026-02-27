@@ -6,7 +6,8 @@ from PyQt6.QtWidgets import (
     QHBoxLayout
 )
 from PyQt6.QtCore import Qt
-
+from PyQt6.QtGui import QTextCursor
+from core.nlp.predictor import Predictor
 from core.input.input_events import Action
 from app.ui.widgets.input_choice import InputChoiceOverlay
 from app.ui.widgets.focusable import FocusableWidget
@@ -15,6 +16,8 @@ from core.audio.stt import VoiceWorker
 from app.ui.widgets.mic_button import MicButton
 from core.input.input_events import Action
 from app.ui.widgets.back_button import BackButton
+from core.nlp.tokenizer import extract_context_and_prefix
+from app.ui.widgets.suggestion_bar import SuggestionBar
 
 class NotesScreen(QWidget):
     def __init__(self, parent=None):
@@ -58,13 +61,17 @@ class NotesScreen(QWidget):
         # ---------- INPUT CHOICE ----------
         self.choice_overlay = InputChoiceOverlay(self)
         self.choice_overlay.hide()
-
+        self.suggestion_bar = SuggestionBar(self)
+        layout.addWidget(self.suggestion_bar)
+        self.suggestion_bar.suggestion_selected.connect(
+            self.on_suggestion_selected
+        )
         # ---------- KEYBOARD ----------
         #self.keyboard = TypingKeyboard(self)
         #self.keyboard.hide()
         #layout.addWidget(self.keyboard)
-
-        
+        self.text_buffer = ""
+        self.predictor = Predictor("assets/models/ngram_model.pkl")
 
         # ---------- FOCUS ----------
         self.text_focus = NotesFocusArea(self.text_area, self)
@@ -108,7 +115,6 @@ class NotesScreen(QWidget):
             ph - 200
         )
         self.mic_label.raise_()
-
         #====typing keyboard===
         self.keyboard = TypingKeyboard(self)
         self.keyboard.setMinimumHeight(650)
@@ -117,9 +123,11 @@ class NotesScreen(QWidget):
         self.setLayout(layout)
         # ---------- FLAGS ----------
         self.typing_active = False
-        self.back_button = BackButton(self)
-        self.back_button.move(20, 20)
-        self.back_button.show()
+
+        #self.back_button = BackButton(self)
+        #self.back_button.move(20, 20)
+        #self.back_button.show()
+
     def resizeEvent(self, event):
         super().resizeEvent(event)
         print("Keyboard height:", self.keyboard.height())
@@ -149,8 +157,15 @@ class NotesScreen(QWidget):
     # ==================================================
 
     def add_text(self, text: str):
-        if text.strip():
-            self.text_area.insertPlainText(text)
+        if text:
+            self.text_buffer += text
+            self.refresh_text_display()
+
+    def refresh_text_display(self):
+        self.text_area.setPlainText(self.text_buffer)
+        cursor = self.text_area.textCursor()
+        cursor.movePosition(QTextCursor.MoveOperation.End)
+        self.text_area.setTextCursor(cursor)
 
         # ==================================================
     # VOICE INPUT (BLINK TOGGLE)
@@ -196,6 +211,8 @@ class NotesScreen(QWidget):
         self.voice_worker = None
 
     def handle_keyboard_action(self, action, value):
+        if not self.typing_active:
+            return
         if action == Action.INSERT_CHAR:
             self.add_text(value)
 
@@ -203,14 +220,36 @@ class NotesScreen(QWidget):
             self.add_text(" ")
 
         elif action == Action.BACKSPACE:
+            self.text_buffer = self.text_buffer[:-1]
+            self.text_area.setPlainText(self.text_buffer)
             cursor = self.text_area.textCursor()
-            cursor.deletePreviousChar()
+            cursor.movePosition(QTextCursor.MoveOperation.End)
+            self.text_area.setTextCursor(cursor)
 
         elif action == Action.DONE:
             self.keyboard.hide()
             self.typing_active = False
+            self.suggestion_bar.update_suggestions([])
+            return
+        # After updating text, compute suggestions
+        suggestions = self.predictor.get_suggestions(self.text_buffer)
+        self.suggestion_bar.update_suggestions(suggestions)
 
+    def on_suggestion_selected(self, word):
+        if not self.typing_active:
+            return
 
+        context, prefix = extract_context_and_prefix(self.text_buffer)
+
+        if prefix:
+            self.text_buffer = self.text_buffer[:-len(prefix)]
+
+        self.text_buffer += word + " "
+
+        self.refresh_text_display()
+
+        suggestions = self.predictor.get_suggestions(self.text_buffer)
+        self.suggestion_bar.update_suggestions(suggestions)
 
 class NotesFocusArea(FocusableWidget):
     def __init__(self, widget, parent=None):
