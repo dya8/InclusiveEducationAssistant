@@ -63,9 +63,6 @@ class NotesScreen(QWidget):
         self.choice_overlay.hide()
         self.suggestion_bar = SuggestionBar(self)
         layout.addWidget(self.suggestion_bar)
-        self.suggestion_bar.suggestion_selected.connect(
-            self.on_suggestion_selected
-        )
         # ---------- KEYBOARD ----------
         #self.keyboard = TypingKeyboard(self)
         #self.keyboard.hide()
@@ -250,6 +247,18 @@ class NotesScreen(QWidget):
 
         suggestions = self.predictor.get_suggestions(self.text_buffer)
         self.suggestion_bar.update_suggestions(suggestions)
+    def get_focusables(self):
+        focusables = []
+
+        # Back button always focusable
+        focusables.append(self.back_button)
+
+        # If typing mode active, include keyboard + suggestions
+        if self.typing_active:
+            focusables.extend(self.keyboard.get_focusables())
+            focusables.extend(self.suggestion_bar.get_focusables())
+
+        return focusables
 
 class NotesFocusArea(FocusableWidget):
     def __init__(self, widget, parent=None):

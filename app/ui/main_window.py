@@ -381,7 +381,7 @@ class MainWindow(QMainWindow):
            self.handle_action(result)
            self.dwell_manager.reset()
            return'''
-        if action == Action.SELECT and self.current_focus:
+        '''if action == Action.SELECT and self.current_focus:
             result = self.current_focus.select()
             self.dwell_manager.reset()
 
@@ -390,9 +390,69 @@ class MainWindow(QMainWindow):
                 self.current_state == AppState.NOTES
                 and self.notes_screen.typing_active
             ):
-                kb_action, value = result
+                kb_action, value = result'''
+        if action == Action.SELECT and self.current_focus:
+                result = self.current_focus.select()
+                self.dwell_manager.reset()
 
-                internal_action, internal_value = self.notes_screen.keyboard.handle_key(kb_action, value)
+                # 🔥 CASE 1 — Suggestion button (returns string)
+                if isinstance(result, str):
+                    if (
+                        self.current_state == AppState.NOTES
+                        and self.notes_screen.typing_active
+                    ):
+                        self.notes_screen.on_suggestion_selected(result)
+
+                        # 🔥 Refresh focusables (keyboard may rebuild)
+                        self.focusables = (
+                            list(self.notes_screen.keyboard.focusables)
+                            + self.notes_screen.suggestion_bar.get_focusables()
+                            + [self.notes_screen.back_button]
+                        )
+
+                        self.current_focus = None
+                        return
+
+                # 🔥 CASE 2 — Typing keyboard (returns tuple)
+                if (
+                    self.current_state == AppState.NOTES
+                    and self.notes_screen.typing_active
+                ):
+                    if isinstance(result, tuple):
+                        kb_action, value = result
+                    else:
+                        kb_action, value = result, None
+
+                    internal_action, internal_value = self.notes_screen.keyboard.handle_key(kb_action, value)
+
+                    # 🔥 Refresh focusables including suggestions
+                    self.focusables = (
+                        list(self.notes_screen.keyboard.focusables)
+                        + self.notes_screen.suggestion_bar.get_focusables()
+                        + [self.notes_screen.back_button]
+                    )
+
+                    self.current_focus = None
+                    self.dwell_manager.reset()
+
+                    if internal_action:
+                        self.notes_screen.handle_keyboard_action(internal_action, internal_value)
+                        # 🔥 Refresh focusables because suggestions changed
+                        self.focusables = (
+                            list(self.notes_screen.keyboard.focusables)
+                            + self.notes_screen.suggestion_bar.get_focusables()
+                            + [self.notes_screen.back_button]
+                        )
+
+                    return
+
+                # 🔥 Normal UI actions
+                if isinstance(result, Action):
+                    self.handle_action(result)
+
+                return
+
+                '''internal_action, internal_value = self.notes_screen.keyboard.handle_key(kb_action, value)
 
                 # refresh focusables after rebuild
                 self.focusables = (
@@ -412,7 +472,7 @@ class MainWindow(QMainWindow):
             # 🔥 Normal UI
             if isinstance(result, Action):
                 self.handle_action(result)
-            return
+            return'''
         
         self.handle_action(action)
         
@@ -428,8 +488,11 @@ class MainWindow(QMainWindow):
 
             # ⌨️ TYPING MODE ACTIVE
             elif self.notes_screen.typing_active:
-                self.focusables = list(self.notes_screen.keyboard.focusables) + [self.notes_screen.back_button]
-
+                self.focusables = (
+                    list(self.notes_screen.keyboard.focusables)
+                    + self.notes_screen.suggestion_bar.get_focusables()
+                    + [self.notes_screen.back_button]
+                )
             # 📋 CHOICE OVERLAY
             else:
                 self.focusables = (
@@ -587,7 +650,11 @@ class MainWindow(QMainWindow):
             self.notes_screen.keyboard.raise_()
             self.notes_screen.typing_active = True
             self.notes_screen.keyboard.build_group_mode()
-            self.focusables = list(self.notes_screen.keyboard.focusables) + [self.notes_screen.back_button]
+            self.focusables = (
+                list(self.notes_screen.keyboard.focusables)
+                + self.notes_screen.suggestion_bar.get_focusables()
+                + [self.notes_screen.back_button]
+            )
             self.current_focus = None
             self.dwell_manager.reset()
             return
@@ -623,6 +690,7 @@ class MainWindow(QMainWindow):
                 # 🔥 If it's a text action → send to notes
                 if internal_action:
                     self.notes_screen.handle_keyboard_action(internal_action, internal_value)
+                    
 
                 return
 

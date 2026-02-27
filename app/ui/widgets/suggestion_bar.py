@@ -1,10 +1,40 @@
-from PyQt6.QtWidgets import QWidget, QHBoxLayout, QPushButton
-from PyQt6.QtCore import pyqtSignal
+from PyQt6.QtWidgets import QWidget, QHBoxLayout, QLabel
+from PyQt6.QtCore import pyqtSignal, Qt
+from app.ui.widgets.focusable import FocusableWidget
+
+
+class SuggestionButton(FocusableWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+        self.word = ""
+
+        self.label = QLabel("", self)
+        self.label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.label.setStyleSheet("""
+            font-size: 22px;
+            color: white;
+        """)
+
+        self.setStyleSheet("""
+            background-color: #444;
+            border-radius: 10px;
+        """)
+
+        self.setMinimumHeight(70)
+
+    def resizeEvent(self, event):
+        self.label.setGeometry(self.rect())
+
+    def set_word(self, word):
+        self.word = word
+        self.label.setText(word)
+
+    def select(self):
+        return self.word
 
 
 class SuggestionBar(QWidget):
-    suggestion_selected = pyqtSignal(str)
-
     def __init__(self, parent=None):
         super().__init__(parent)
 
@@ -14,41 +44,19 @@ class SuggestionBar(QWidget):
 
         self.buttons = []
 
-        # Create 3 large suggestion buttons
         for _ in range(3):
-            btn = QPushButton("")
-            btn.setMinimumHeight(70)
-            btn.setStyleSheet("""
-                QPushButton {
-                    font-size: 22px;
-                    padding: 10px;
-                    border-radius: 10px;
-                    background-color: #444;
-                    color: white;
-                }
-                QPushButton:hover {
-                    background-color: #666;
-                }
-            """)
-            btn.clicked.connect(self.handle_click)
+            btn = SuggestionButton(self)
             btn.hide()
             self.layout.addWidget(btn)
             self.buttons.append(btn)
 
     def update_suggestions(self, suggestions):
-        """
-        Updates the suggestion buttons.
-        Expects a list of words (max 3).
-        """
         for i, btn in enumerate(self.buttons):
             if i < len(suggestions):
-                btn.setText(suggestions[i])
+                btn.set_word(suggestions[i])
                 btn.show()
             else:
                 btn.hide()
 
-    def handle_click(self):
-        sender = self.sender()
-        if sender:
-            word = sender.text()
-            self.suggestion_selected.emit(word)
+    def get_focusables(self):
+        return [btn for btn in self.buttons if btn.isVisible()]
