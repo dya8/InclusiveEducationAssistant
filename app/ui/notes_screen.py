@@ -63,10 +63,12 @@ class NotesScreen(QWidget):
         self.choice_overlay.hide()
         self.suggestion_bar = SuggestionBar(self)
         layout.addWidget(self.suggestion_bar)
+        
         # ---------- KEYBOARD ----------
         #self.keyboard = TypingKeyboard(self)
         #self.keyboard.hide()
         #layout.addWidget(self.keyboard)
+
         self.text_buffer = ""
         self.predictor = Predictor("assets/models/ngram_model.pkl")
 
@@ -121,9 +123,9 @@ class NotesScreen(QWidget):
         # ---------- FLAGS ----------
         self.typing_active = False
 
-        #self.back_button = BackButton(self)
-        #self.back_button.move(20, 20)
-        #self.back_button.show()
+        self.back_button = BackButton(self)
+        self.back_button.move(20, 20)
+        self.back_button.show()
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
