@@ -56,7 +56,7 @@ class NotesScreen(QWidget):
             }
         """)
         
-        layout.addWidget(self.text_area,stretch=4)
+        layout.addWidget(self.text_area,stretch=3)
 
         # ---------- INPUT CHOICE ----------
         self.choice_overlay = InputChoiceOverlay(self)

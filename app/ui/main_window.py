@@ -391,7 +391,8 @@ class MainWindow(QMainWindow):
                 and self.notes_screen.typing_active
             ):
                 kb_action, value = result'''
-        if action == Action.SELECT and self.current_focus:
+        #..........normal......
+        '''if action == Action.SELECT and self.current_focus:
                 result = self.current_focus.select()
                 self.dwell_manager.reset()
 
@@ -450,9 +451,9 @@ class MainWindow(QMainWindow):
                 if isinstance(result, Action):
                     self.handle_action(result)
 
-                return
+                return'''
 
-                '''internal_action, internal_value = self.notes_screen.keyboard.handle_key(kb_action, value)
+        '''internal_action, internal_value = self.notes_screen.keyboard.handle_key(kb_action, value)
 
                 # refresh focusables after rebuild
                 self.focusables = (
@@ -472,10 +473,92 @@ class MainWindow(QMainWindow):
             # 🔥 Normal UI
             if isinstance(result, Action):
                 self.handle_action(result)
-            return'''
+            return''' 
         
+        #self.handle_action(action)
+        # ---------- GENERIC SELECT HANDLER ----------
+        if action == Action.SELECT and self.current_focus:
+            result = self.current_focus.select()
+            self.dwell_manager.reset()
+
+            # ==================================================
+            # 1️⃣ GLOBAL ACTIONS (BACK MUST OVERRIDE TYPING)
+            # ==================================================
+            if isinstance(result, Action) and result == Action.BACK:
+                self.handle_action(result)
+                return
+
+            # ==================================================
+            # 2️⃣ SUGGESTION BUTTON (returns string)
+            # ==================================================
+            if isinstance(result, str):
+                if (
+                    self.current_state == AppState.NOTES
+                    and self.notes_screen.typing_active
+                ):
+                    self.notes_screen.on_suggestion_selected(result)
+
+                    # Refresh focusables (suggestions may rebuild)
+                    self.focusables = (
+                        list(self.notes_screen.keyboard.focusables)
+                        + self.notes_screen.suggestion_bar.get_focusables()
+                        + [self.notes_screen.back_button]
+                    )
+
+                    self.current_focus = None
+                    return
+
+            # ==================================================
+            # 3️⃣ TYPING KEYBOARD (returns tuple or Action)
+            # ==================================================
+            if (
+                self.current_state == AppState.NOTES
+                and self.notes_screen.typing_active
+            ):
+                if isinstance(result, tuple):
+                    kb_action, value = result
+                else:
+                    kb_action, value = result, None
+
+                internal_action, internal_value = (
+                    self.notes_screen.keyboard.handle_key(kb_action, value)
+                )
+
+                # Refresh focusables including suggestions
+                self.focusables = (
+                    list(self.notes_screen.keyboard.focusables)
+                    + self.notes_screen.suggestion_bar.get_focusables()
+                    + [self.notes_screen.back_button]
+                )
+
+                self.current_focus = None
+                self.dwell_manager.reset()
+
+                if internal_action:
+                    self.notes_screen.handle_keyboard_action(
+                        internal_action,
+                        internal_value
+                    )
+
+                    # Suggestions may change after typing
+                    self.focusables = (
+                        list(self.notes_screen.keyboard.focusables)
+                        + self.notes_screen.suggestion_bar.get_focusables()
+                        + [self.notes_screen.back_button]
+                    )
+
+                return
+
+            # ==================================================
+            # 4️⃣ NORMAL UI ACTIONS
+            # ==================================================
+            if isinstance(result, Action):
+                self.handle_action(result)
+                return
+            
         self.handle_action(action)
-        
+            
+                
     def restore_normal_input(self):
         if self.current_state == AppState.HOME:
             self.focusables = self.home_screen.focusables
