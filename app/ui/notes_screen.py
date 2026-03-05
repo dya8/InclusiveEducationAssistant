@@ -18,6 +18,10 @@ from core.input.input_events import Action
 from app.ui.widgets.back_button import BackButton
 from core.nlp.tokenizer import extract_context_and_prefix
 from app.ui.widgets.suggestion_bar import SuggestionBar
+import os
+from datetime import datetime
+from app.state.app_state import AppState
+from app.ui.widgets.save_button import SaveButton
 
 class NotesScreen(QWidget):
     def __init__(self, parent=None):
@@ -114,6 +118,7 @@ class NotesScreen(QWidget):
             ph - 200
         )
         self.mic_label.raise_()
+        
         #====typing keyboard===
         self.keyboard = TypingKeyboard(self)
         self.keyboard.setMinimumHeight(650)
@@ -122,7 +127,9 @@ class NotesScreen(QWidget):
         self.setLayout(layout)
         # ---------- FLAGS ----------
         self.typing_active = False
-
+        self.save_button = SaveButton(self)
+        self.save_button.move(800, 450)
+        self.save_button.hide()
         self.back_button = BackButton(self)
         self.back_button.move(20, 20)
         self.back_button.show()
@@ -150,6 +157,10 @@ class NotesScreen(QWidget):
             (self.width() - self.mic_label.width()) // 2,
             self.height() - 200
         )
+        self.save_button.move(
+            self.width() - 220,
+            self.height() // 2
+        )
 
     # ==================================================
     # TEXT
@@ -165,6 +176,34 @@ class NotesScreen(QWidget):
         cursor = self.text_area.textCursor()
         cursor.movePosition(QTextCursor.MoveOperation.End)
         self.text_area.setTextCursor(cursor)
+    
+    def save_note(self):
+        if not self.text_buffer.strip():
+            return
+
+        user = AppState.current_user
+
+        base = os.path.join("assets","notes",user)
+        os.makedirs(base, exist_ok=True)
+
+        words = self.text_buffer.strip().split()
+        first_word = words[0].lower()
+
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M")
+
+        filename = f"{first_word}_{timestamp}.txt"
+
+        path = os.path.join(base, filename)
+
+        with open(path,"w",encoding="utf-8") as f:
+            f.write(self.text_buffer)
+
+        print("Saved:", path)
+
+        #clear after saving
+
+        self.text_buffer = ""
+        self.refresh_text_display()
 
         # ==================================================
     # VOICE INPUT (BLINK TOGGLE)

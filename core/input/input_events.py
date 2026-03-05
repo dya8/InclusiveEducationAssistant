@@ -42,3 +42,5 @@ class Action(Enum):
     NUMBER_MODE = auto()
     LETTER_MODE = auto()
     BACK_MODE = auto()
+    OPEN_VIEW_NOTES = auto()   
+    SAVE_NOTE = auto()         

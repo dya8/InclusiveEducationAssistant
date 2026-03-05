@@ -19,6 +19,7 @@ from app.ui.widgets.mic_button import MicButton
 import os 
 import cv2
 from datetime import datetime
+from app.ui.view_notes_screen import ViewNotesScreen
 from core.vision.camera import CameraManager
 from core.vision.face_mesh import FaceMeshDetector
 from core.vision.blink_detector import BlinkDetector
@@ -60,7 +61,8 @@ class MainWindow(QMainWindow):
         self.layout.addWidget(self.home_screen)
         self.notes_screen = NotesScreen(self)
         self.layout.addWidget(self.notes_screen)
-
+        self.view_notes_screen = ViewNotesScreen(self)
+        self.layout.addWidget(self.view_notes_screen)
         self.container.setLayout(self.layout)
         self.setCentralWidget(self.container)
 
@@ -178,6 +180,19 @@ class MainWindow(QMainWindow):
                 list(self.notes_screen.choice_overlay.focusables)
                 + [self.notes_screen.back_button]
             )
+            return
+        # ===============================
+        # VIEW NOTES
+        # ===============================
+        if state == AppState.VIEW_NOTES:
+            self.layout.setCurrentWidget(self.view_notes_screen)
+
+            self.view_notes_screen.load_notes()
+
+            self.focusables = [
+                self.view_notes_screen.back_button
+            ]
+
             return
 
 
@@ -609,7 +624,11 @@ class MainWindow(QMainWindow):
                 #self.input_manager.reset()
                 self.restore_normal_input()
                 return
-
+            # VIEW NOTES → go back to HOME
+            if self.current_state == AppState.VIEW_NOTES:
+                self.switch_state(AppState.HOME)
+                self.input_manager.force_cursor_mode()
+                return
             # 2️⃣ If inside NOTES → handle internal navigation
             if self.current_state == AppState.NOTES:
 
@@ -618,6 +637,9 @@ class MainWindow(QMainWindow):
                     self.notes_screen.keyboard.hide()
                     self.notes_screen.suggestion_bar.hide()
                     self.notes_screen.text_area.hide()
+
+                    self.notes_screen.save_button.hide() 
+
                     self.notes_screen.typing_active = False
 
                     self.notes_screen.choice_overlay.show()
@@ -640,6 +662,8 @@ class MainWindow(QMainWindow):
 
                     self.notes_screen.text_area.hide()
                     self.notes_screen.suggestion_bar.hide()
+
+                    self.notes_screen.save_button.hide()   
 
                     self.notes_screen.choice_overlay.show()
                     self.notes_screen.choice_overlay.raise_()
@@ -734,7 +758,10 @@ class MainWindow(QMainWindow):
             self.notes_screen.suggestion_bar.hide()
             self.notes_screen.mic_button.show()
             self.notes_screen.mic_button.raise_()
-            self.focusables = [self.notes_screen.mic_button,self.notes_screen.back_button]
+
+            self.notes_screen.save_button.show()
+
+            self.focusables = [self.notes_screen.mic_button,self.notes_screen.save_button,self.notes_screen.back_button]
             self.current_focus = None
             self.dwell_manager.reset()
             return
@@ -744,17 +771,26 @@ class MainWindow(QMainWindow):
             self.notes_screen.suggestion_bar.show()
             self.notes_screen.keyboard.show()
             self.notes_screen.keyboard.raise_()
+
+            self.notes_screen.save_button.show()
+
             self.notes_screen.typing_active = True
             self.notes_screen.keyboard.build_group_mode()
             self.focusables = (
                 list(self.notes_screen.keyboard.focusables)
                 + self.notes_screen.suggestion_bar.get_focusables()
-                + [self.notes_screen.back_button]
+                + [self.notes_screen.save_button,self.notes_screen.back_button]
             )
             self.current_focus = None
             self.dwell_manager.reset()
             return
-
+        
+        if action == Action.OPEN_VIEW_NOTES:
+            self.switch_state(AppState.VIEW_NOTES)
+            return
+        if action == Action.SAVE_NOTE:
+            self.notes_screen.save_note()
+            return
 
         # ---------- GENERIC SELECT HANDLER ----------
         if action == Action.SELECT and self.current_focus:
@@ -778,7 +814,8 @@ class MainWindow(QMainWindow):
                 # 🔥 Refresh focusables after rebuild
                 self.focusables = (
                     list(self.notes_screen.keyboard.focusables)
-                    + [self.notes_screen.back_button]
+                    + self.notes_screen.suggestion_bar.get_focusables()
+                    + [self.notes_screen.save_button, self.notes_screen.back_button]
                 )
                 self.current_focus = None
                 self.dwell_manager.reset()

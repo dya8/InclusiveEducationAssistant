@@ -26,8 +26,15 @@ class HomeScreen(QWidget):
         self.btn_coding.resize(300, 120)
         self.btn_coding.move(450, 420)
 
+        # ---------- VIEW NOTES ----------
+        self.btn_view_notes = TestButton("VIEW NOTES", self)
+        self.btn_view_notes.setObjectName("ViewNotes")
+        self.btn_view_notes.resize(300, 120)
+        self.btn_view_notes.move(450, 590)
+
         # ---------- FOCUSABLES ----------
         self.focusables = [
             self.btn_notes,
-            self.btn_coding
+            self.btn_coding,
+            self.btn_view_notes
         ]

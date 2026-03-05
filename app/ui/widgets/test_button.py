@@ -12,7 +12,13 @@ class TestButton(FocusableWidget):
         if self.objectName() == "TakeNotes":
             print("Take Notes selected")
             return Action.OPEN_NOTES
+        
+        #if self.objectName() == "Coding":
+            #return Action.OPEN_CODING
 
+        if self.objectName() == "ViewNotes":
+            return Action.OPEN_VIEW_NOTES
+        
         return Action.NONE
 
 

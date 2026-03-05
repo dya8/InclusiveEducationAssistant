@@ -6,3 +6,4 @@ class AppState(Enum):
     HOME = auto()
     NOTES = auto()
     CODING = auto()
+    VIEW_NOTES = auto()
