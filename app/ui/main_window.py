@@ -616,6 +616,8 @@ class MainWindow(QMainWindow):
                 # Typing keyboard active → go back to choice overlay
                 if self.notes_screen.typing_active:
                     self.notes_screen.keyboard.hide()
+                    self.notes_screen.suggestion_bar.hide()
+                    self.notes_screen.text_area.hide()
                     self.notes_screen.typing_active = False
 
                     self.notes_screen.choice_overlay.show()
@@ -636,6 +638,9 @@ class MainWindow(QMainWindow):
                     self.notes_screen.mic_label.hide()
                     self.notes_screen.voice_active = False
 
+                    self.notes_screen.text_area.hide()
+                    self.notes_screen.suggestion_bar.hide()
+
                     self.notes_screen.choice_overlay.show()
                     self.notes_screen.choice_overlay.raise_()
 
@@ -650,6 +655,10 @@ class MainWindow(QMainWindow):
 
                 # If already in choice overlay → go HOME
                 if self.notes_screen.choice_overlay.isVisible():
+                    # 🔴 CLEAR NOTE WHEN LEAVING NOTES SCREEN
+                    self.notes_screen.text_buffer = ""
+                    self.notes_screen.refresh_text_display()
+
                     self.switch_state(AppState.HOME)
                     self.input_manager.force_cursor_mode()
                     #self.input_manager.reset()
@@ -721,6 +730,8 @@ class MainWindow(QMainWindow):
 
         if action == Action.VOICE_INPUT:
             self.notes_screen.choice_overlay.hide()
+            self.notes_screen.text_area.show()
+            self.notes_screen.suggestion_bar.hide()
             self.notes_screen.mic_button.show()
             self.notes_screen.mic_button.raise_()
             self.focusables = [self.notes_screen.mic_button,self.notes_screen.back_button]
@@ -729,6 +740,8 @@ class MainWindow(QMainWindow):
             return
         if action == Action.OPEN_TYPING_KEYBOARD:
             self.notes_screen.choice_overlay.hide()
+            self.notes_screen.text_area.show()
+            self.notes_screen.suggestion_bar.show()
             self.notes_screen.keyboard.show()
             self.notes_screen.keyboard.raise_()
             self.notes_screen.typing_active = True

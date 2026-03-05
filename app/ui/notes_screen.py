@@ -30,7 +30,7 @@ class NotesScreen(QWidget):
         # Header row
         header_layout = QHBoxLayout()
         header_layout.setSpacing(20)
-        self.back_button = BackButton(self)
+        #self.back_button = BackButton(self)
         title = QLabel("Take Notes")
         title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         title.setStyleSheet("""
@@ -38,7 +38,7 @@ class NotesScreen(QWidget):
             font-weight: 600;
             color: #222;
         """)
-        header_layout.addWidget(self.back_button, alignment=Qt.AlignmentFlag.AlignLeft)
+        #header_layout.addWidget(self.back_button, alignment=Qt.AlignmentFlag.AlignLeft)
         header_layout.addStretch()
         header_layout.addWidget(title)
         header_layout.addStretch()
