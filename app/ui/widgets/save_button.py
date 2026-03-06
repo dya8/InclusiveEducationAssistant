@@ -8,12 +8,12 @@ class SaveButton(FocusableWidget):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.resize(220, 100)
+        self.resize(220, 220)
 
         self.label = QLabel("💾 SAVE NOTE", self)
         self.label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.label.setStyleSheet("font-size:20px;")
-        self.label.setGeometry(0,0,220,100)
+        self.label.setGeometry(0,0,220,220)
 
     def select(self):
         return Action.SAVE_NOTE

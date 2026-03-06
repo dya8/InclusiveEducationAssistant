@@ -44,3 +44,4 @@ class Action(Enum):
     BACK_MODE = auto()
     OPEN_VIEW_NOTES = auto()   
     SAVE_NOTE = auto()         
+    CLEAR_TEXT = auto()

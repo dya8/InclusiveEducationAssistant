@@ -550,6 +550,11 @@ class MainWindow(QMainWindow):
                 self.dwell_manager.reset()
 
                 if internal_action:
+
+                    if internal_action == Action.SAVE_NOTE:
+                        self.handle_action(internal_action)
+                        return
+                    
                     self.notes_screen.handle_keyboard_action(
                         internal_action,
                         internal_value
@@ -772,7 +777,6 @@ class MainWindow(QMainWindow):
             self.notes_screen.keyboard.show()
             self.notes_screen.keyboard.raise_()
 
-            self.notes_screen.save_button.show()
 
             self.notes_screen.typing_active = True
             self.notes_screen.keyboard.build_group_mode()
@@ -789,7 +793,9 @@ class MainWindow(QMainWindow):
             self.switch_state(AppState.VIEW_NOTES)
             return
         if action == Action.SAVE_NOTE:
+            print("SAVE ACTION TRIGGERED")
             self.notes_screen.save_note()
+            self.switch_state(AppState.HOME)
             return
 
         # ---------- GENERIC SELECT HANDLER ----------

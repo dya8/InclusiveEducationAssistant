@@ -59,7 +59,7 @@ class NotesScreen(QWidget):
                 color: white;
             }
         """)
-        
+        self.text_area.hide()
         layout.addWidget(self.text_area,stretch=3)
 
         # ---------- INPUT CHOICE ----------
@@ -121,17 +121,17 @@ class NotesScreen(QWidget):
         
         #====typing keyboard===
         self.keyboard = TypingKeyboard(self)
-        self.keyboard.setMinimumHeight(650)
+        self.keyboard.setMinimumHeight(450)
         self.keyboard.hide()
-        layout.addWidget(self.keyboard, stretch=5)
+        layout.addWidget(self.keyboard, stretch=3)
         self.setLayout(layout)
         # ---------- FLAGS ----------
         self.typing_active = False
         self.save_button = SaveButton(self)
-        self.save_button.move(800, 450)
+        self.save_button.move(20, 450)
         self.save_button.hide()
         self.back_button = BackButton(self)
-        self.back_button.move(20, 20)
+        self.back_button.move(450, 90)
         self.back_button.show()
 
     def resizeEvent(self, event):
@@ -157,10 +157,7 @@ class NotesScreen(QWidget):
             (self.width() - self.mic_label.width()) // 2,
             self.height() - 200
         )
-        self.save_button.move(
-            self.width() - 220,
-            self.height() // 2
-        )
+        self.save_button.move(450,90)
 
     # ==================================================
     # TEXT
@@ -256,6 +253,10 @@ class NotesScreen(QWidget):
 
         elif action == Action.SPACE:
             self.add_text(" ")
+        
+        elif action == Action.CLEAR_TEXT:
+            self.text_buffer = ""
+            self.refresh_text_display()
 
         elif action == Action.BACKSPACE:
             self.text_buffer = self.text_buffer[:-1]

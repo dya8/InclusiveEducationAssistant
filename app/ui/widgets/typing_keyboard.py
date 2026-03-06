@@ -42,6 +42,16 @@ class TypingKeyboard(QWidget):
     # ==================================================
     def build_group_mode(self):
         self.clear_keys()
+        save = KeyButton("SAVE", Action.SAVE_NOTE, None, self)
+        save.setMinimumSize(220, 320)
+        save.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        save.setMinimumSize(220, 320)
+        save.setStyleSheet("""
+        background:#2ecc71;
+        font-size:30px;
+        font-weight:bold;
+        """)
+
         self.mode = "GROUP"
 
         row = 0
@@ -49,7 +59,7 @@ class TypingKeyboard(QWidget):
 
         for group in GROUPS.keys():
             btn = KeyButton(group, Action.GROUP_SELECT, group, self)
-            btn.setMinimumSize(170, 95)
+            btn.setMinimumSize(220, 150)
             btn.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
 
             self.grid.addWidget(btn, row, col)
@@ -59,25 +69,27 @@ class TypingKeyboard(QWidget):
             if col == 4:
                 col = 0
                 row += 1
-
+        # SAVE BUTTON (right side vertical)
+        self.grid.addWidget(save, 0, 4, 3, 1)
+        self.focusables.append(save)
         # bottom row
         row += 1
 
         space = KeyButton("SPACE", Action.SPACE, None, self)
         num = KeyButton("123", Action.NUMBER_MODE, None, self)
-        back = KeyButton("⌫", Action.BACKSPACE, None, self)
+        clear = KeyButton("CLEAR", Action.BACKSPACE, None, self)
         done = KeyButton("DONE", Action.DONE, None, self)
 
-        for btn in [space, num, back, done]:
-            btn.setMinimumSize(170, 95)
+        for btn in [space, num, clear, done]:
+            btn.setMinimumSize(220, 150)
             btn.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
 
         self.grid.addWidget(space, row, 0)
         self.grid.addWidget(num, row, 1)
-        self.grid.addWidget(back, row, 2)
+        self.grid.addWidget(clear, row, 2)
         self.grid.addWidget(done, row, 3)
 
-        self.focusables += [space, num, back, done]
+        self.focusables += [space, num, clear, done]
 
         self._apply_row_stretch(row)
 
@@ -93,7 +105,7 @@ class TypingKeyboard(QWidget):
 
         for col, ch in enumerate(letters):
             btn = KeyButton(ch, Action.INSERT_CHAR, ch, self)
-            btn.setMinimumSize(170, 95)
+            btn.setMinimumSize(220, 150)
             btn.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
 
             self.grid.addWidget(btn, 0, col)
@@ -105,7 +117,7 @@ class TypingKeyboard(QWidget):
         back_btn = KeyButton("BACK", Action.BACK_MODE, None, self)
 
         for col, btn in enumerate([space, back, back_btn]):
-            btn.setMinimumSize(170, 95)
+            btn.setMinimumSize(220, 150)
             btn.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
 
             self.grid.addWidget(btn, 1, col)
@@ -127,7 +139,7 @@ class TypingKeyboard(QWidget):
             col = i % 3
 
             btn = KeyButton(n, Action.INSERT_CHAR, n, self)
-            btn.setMinimumSize(150, 85)
+            btn.setMinimumSize(170, 95)
             btn.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
 
             self.grid.addWidget(btn, row, col)
@@ -138,7 +150,7 @@ class TypingKeyboard(QWidget):
         back_btn = KeyButton("BACK", Action.BACK_MODE, None, self)
 
         for col, btn in enumerate([zero, back, back_btn]):
-            btn.setMinimumSize(150, 85)
+            btn.setMinimumSize(170, 95)
             btn.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
 
             self.grid.addWidget(btn, 3, col)
@@ -152,7 +164,7 @@ class TypingKeyboard(QWidget):
     def _apply_row_stretch(self, last_row):
         for r in range(last_row + 1):
             self.grid.setRowStretch(r, 1)
-        for c in range(4):
+        for c in range(5):
             self.grid.setColumnStretch(c, 1)
 
     # ==================================================
@@ -172,7 +184,9 @@ class TypingKeyboard(QWidget):
             Action.INSERT_CHAR,
             Action.SPACE,
             Action.BACKSPACE,
-            Action.DONE
+            Action.DONE,
+            Action.SAVE_NOTE,
+            Action.CLEAR_TEXT
         ):
             return action, value
 
