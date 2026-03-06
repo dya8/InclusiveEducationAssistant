@@ -20,6 +20,7 @@ from core.nlp.tokenizer import extract_context_and_prefix
 from app.ui.widgets.suggestion_bar import SuggestionBar
 import os
 from datetime import datetime
+from PyQt6.QtCore import QTimer
 from app.state.app_state import AppState
 from app.ui.widgets.save_button import SaveButton
 
@@ -118,6 +119,20 @@ class NotesScreen(QWidget):
             ph - 200
         )
         self.mic_label.raise_()
+        self.save_popup = QLabel("", self)
+
+        self.save_popup.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        self.save_popup.setStyleSheet("""
+        background-color: rgba(0,0,0,0.85);
+        color: white;
+        font-size: 28px;
+        padding: 20px;
+        border-radius: 10px;
+        """)
+
+        self.save_popup.hide()
+        self.save_popup.raise_()
         
         #====typing keyboard===
         self.keyboard = TypingKeyboard(self)
@@ -173,7 +188,24 @@ class NotesScreen(QWidget):
         cursor = self.text_area.textCursor()
         cursor.movePosition(QTextCursor.MoveOperation.End)
         self.text_area.setTextCursor(cursor)
-    
+
+    def show_save_popup(self, filename):
+
+        message = f"Note Saved\n{filename}"
+
+        self.save_popup.setText(message)
+        self.save_popup.adjustSize()
+
+        self.save_popup.move(
+            (self.width() - self.save_popup.width()) // 2,
+            int(self.height() * 0.35)
+        )
+
+        self.save_popup.show()
+        self.save_popup.raise_()
+
+        QTimer.singleShot(3500, self.save_popup.hide)
+        
     def save_note(self):
         if not self.text_buffer.strip():
             return
@@ -197,6 +229,7 @@ class NotesScreen(QWidget):
 
         print("Saved:", path)
 
+        self.show_save_popup(filename)
         #clear after saving
 
         self.text_buffer = ""

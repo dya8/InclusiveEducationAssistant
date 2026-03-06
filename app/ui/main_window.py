@@ -135,6 +135,9 @@ class MainWindow(QMainWindow):
         if self.current_state == AppState.NOTES:
             self.notes_screen.mic_button.hide()
             self.notes_screen.mic_label.hide()
+            self.notes_screen.suggestion_bar.hide()
+            self.notes_screen.text_area.hide()
+            self.notes_screen.save_button.hide()
             self.notes_screen.voice_active = False
             self.notes_screen.typing_active = False
             self.notes_screen.keyboard.hide()
@@ -196,39 +199,6 @@ class MainWindow(QMainWindow):
             return
 
 
-    '''def switch_state(self, state):
-        if self.current_state == AppState.NOTES:
-            self.notes_screen.mic_button.hide()
-            self.notes_screen.voice_active = False
-
-        self.current_state = state
-
-        if state == AppState.LOGIN:
-            self.layout.setCurrentWidget(self.login_screen)
-
-        elif state == AppState.CALIBRATION:
-            self.layout.setCurrentWidget(self.calibration_screen)
-
-        elif state == AppState.HOME:
-            self.layout.setCurrentWidget(self.home_screen)
-            self.focusables = list(self.home_screen.focusables)
-            self.current_focus = None
-
-        elif state == AppState.NOTES:
-            self.layout.setCurrentWidget(self.notes_screen)
-
-            # 🔑 SHOW INPUT CHOICE IMMEDIATELY
-            self.notes_screen.choice_overlay.show()
-            self.notes_screen.choice_overlay.raise_()
-
-            self.focusables = (
-            list(self.notes_screen.choice_overlay.focusables)
-            + [self.notes_screen.back_button]
-            )
-
-            self.current_focus = None
-            self.dwell_manager.reset()
-        self.input_manager.reset()'''
     def save_new_user_face(self, frame):
     # Create base directory if not exists
 
@@ -587,7 +557,7 @@ class MainWindow(QMainWindow):
 
             # 🎤 VOICE MODE ACTIVE
             if self.notes_screen.mic_button.isVisible():
-                self.focusables = [self.notes_screen.mic_button,self.notes_screen.back_button]
+                self.focusables = [self.notes_screen.mic_button,self.notes_screen.save_button,self.notes_screen.back_button]
 
             # ⌨️ TYPING MODE ACTIVE
             elif self.notes_screen.typing_active:
@@ -758,6 +728,13 @@ class MainWindow(QMainWindow):
             return
 
         if action == Action.VOICE_INPUT:
+            # reset focus system
+            if self.current_focus:
+                self.current_focus.set_focus(False)
+
+            self.current_focus = None
+            self.dwell_manager.reset()
+
             self.notes_screen.choice_overlay.hide()
             self.notes_screen.text_area.show()
             self.notes_screen.suggestion_bar.hide()
