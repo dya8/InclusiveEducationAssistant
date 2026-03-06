@@ -638,7 +638,7 @@ class MainWindow(QMainWindow):
             if self.current_state == AppState.NOTES:
 
                 # Typing keyboard active → go back to choice overlay
-                if self.notes_screen.typing_active:
+                if self.notes_screen.typing_active or self.notes_screen.text_area.isVisible():
                     self.notes_screen.keyboard.hide()
                     self.notes_screen.suggestion_bar.hide()
                     self.notes_screen.text_area.hide()

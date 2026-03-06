@@ -267,6 +267,7 @@ class NotesScreen(QWidget):
 
         elif action == Action.DONE:
             self.keyboard.hide()
+            self.suggestion_bar.hide()
             self.typing_active = False
             self.suggestion_bar.update_suggestions([])
             return
