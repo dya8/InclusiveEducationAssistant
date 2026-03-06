@@ -192,7 +192,7 @@ class MainWindow(QMainWindow):
 
             self.view_notes_screen.load_notes()
 
-            self.focusables = [
+            self.focusables = self.view_notes_screen.note_items + [
                 self.view_notes_screen.back_button
             ]
 
@@ -344,7 +344,23 @@ class MainWindow(QMainWindow):
         self.cursor_y += dy_s * self.CURSOR_GAIN_Y
 
         self.cursor_controller.move_to(self.cursor_x, self.cursor_y)
+        # ---------- EYE SCROLLING ----------
+        if self.current_state == AppState.VIEW_NOTES:
 
+            if not hasattr(self, "last_scroll"):
+                self.last_scroll = 0
+
+            if time.time() - self.last_scroll > 0.15:
+
+                scrollbar = self.view_notes_screen.scroll.verticalScrollBar()
+
+                if self.cursor_y < 0.12:
+                    scrollbar.setValue(scrollbar.value() - 30)
+                    self.last_scroll = time.time()
+
+                elif self.cursor_y > 0.88:
+                    scrollbar.setValue(scrollbar.value() + 30)
+                    self.last_scroll = time.time()
 
         # ---------- ACTION ----------
         action = self.input_manager.update(
@@ -360,107 +376,7 @@ class MainWindow(QMainWindow):
         #print("CURRENT FOCUS:", type(self.current_focus))
         print("SELECT DETECTED")
         print("Current focus:", self.current_focus)
-        #THIS IS THE ONLY SELECTION LOGIC
-        '''if action == Action.SELECT and self.current_focus:
-           result = self.current_focus.select()
-           self.handle_action(result)
-           self.dwell_manager.reset()
-           return'''
-        '''if action == Action.SELECT and self.current_focus:
-            result = self.current_focus.select()
-            self.dwell_manager.reset()
 
-            # 🔥 If typing mode active
-            if (
-                self.current_state == AppState.NOTES
-                and self.notes_screen.typing_active
-            ):
-                kb_action, value = result'''
-        #..........normal......
-        '''if action == Action.SELECT and self.current_focus:
-                result = self.current_focus.select()
-                self.dwell_manager.reset()
-
-                # 🔥 CASE 1 — Suggestion button (returns string)
-                if isinstance(result, str):
-                    if (
-                        self.current_state == AppState.NOTES
-                        and self.notes_screen.typing_active
-                    ):
-                        self.notes_screen.on_suggestion_selected(result)
-
-                        # 🔥 Refresh focusables (keyboard may rebuild)
-                        self.focusables = (
-                            list(self.notes_screen.keyboard.focusables)
-                            + self.notes_screen.suggestion_bar.get_focusables()
-                            + [self.notes_screen.back_button]
-                        )
-
-                        self.current_focus = None
-                        return
-
-                # 🔥 CASE 2 — Typing keyboard (returns tuple)
-                if (
-                    self.current_state == AppState.NOTES
-                    and self.notes_screen.typing_active
-                ):
-                    if isinstance(result, tuple):
-                        kb_action, value = result
-                    else:
-                        kb_action, value = result, None
-
-                    internal_action, internal_value = self.notes_screen.keyboard.handle_key(kb_action, value)
-
-                    # 🔥 Refresh focusables including suggestions
-                    self.focusables = (
-                        list(self.notes_screen.keyboard.focusables)
-                        + self.notes_screen.suggestion_bar.get_focusables()
-                        + [self.notes_screen.back_button]
-                    )
-
-                    self.current_focus = None
-                    self.dwell_manager.reset()
-
-                    if internal_action:
-                        self.notes_screen.handle_keyboard_action(internal_action, internal_value)
-                        # 🔥 Refresh focusables because suggestions changed
-                        self.focusables = (
-                            list(self.notes_screen.keyboard.focusables)
-                            + self.notes_screen.suggestion_bar.get_focusables()
-                            + [self.notes_screen.back_button]
-                        )
-
-                    return
-
-                # 🔥 Normal UI actions
-                if isinstance(result, Action):
-                    self.handle_action(result)
-
-                return'''
-
-        '''internal_action, internal_value = self.notes_screen.keyboard.handle_key(kb_action, value)
-
-                # refresh focusables after rebuild
-                self.focusables = (
-                    list(self.notes_screen.keyboard.focusables)
-                    + [self.notes_screen.back_button]
-                )
-
-                self.current_focus = None
-                self.dwell_manager.reset()
-
-                # If text key pressed
-                if internal_action:
-                    self.notes_screen.handle_keyboard_action(internal_action, internal_value)
-
-                return
-
-            # 🔥 Normal UI
-            if isinstance(result, Action):
-                self.handle_action(result)
-            return''' 
-        
-        #self.handle_action(action)
         # ---------- GENERIC SELECT HANDLER ----------
         if action == Action.SELECT and self.current_focus:
             result = self.current_focus.select()
@@ -545,6 +461,10 @@ class MainWindow(QMainWindow):
             if isinstance(result, Action):
                 self.handle_action(result)
                 return
+            #  HANDLE TUPLE ACTIONS (OPEN NOTE / DELETE NOTE)
+            if isinstance(result, tuple):
+                self.handle_action(result)
+                return
             
         self.handle_action(action)
             
@@ -580,6 +500,36 @@ class MainWindow(QMainWindow):
     # =====================================================
 
     def handle_action(self, action: Action):
+
+        # ==============================
+        # NOTE ACTIONS (OPEN / DELETE)
+        # ==============================
+        if isinstance(action, tuple):
+
+            action_type, path = action
+
+            if action_type == "OPEN_NOTE":
+
+                with open(path, "r", encoding="utf-8") as f:
+                    text = f.read()
+
+                self.view_notes_screen.show_note(text)
+                return
+
+            if action_type == "DELETE_NOTE":
+
+                if os.path.exists(path):
+                    os.remove(path)
+
+                self.view_notes_screen.load_notes()
+
+                # refresh focusables
+                self.focusables = (
+                    self.view_notes_screen.note_items
+                    + [self.view_notes_screen.back_button]
+                )
+
+                return
         if action == Action.NONE:
             return
         # ==================================================
@@ -601,6 +551,16 @@ class MainWindow(QMainWindow):
                 return
             # VIEW NOTES → go back to HOME
             if self.current_state == AppState.VIEW_NOTES:
+                if self.view_notes_screen.viewer.isVisible():
+                    self.view_notes_screen.show_list()
+
+                    self.focusables = (
+                        self.view_notes_screen.note_items
+                        + [self.view_notes_screen.back_button]
+                    )
+
+                    return
+                
                 self.switch_state(AppState.HOME)
                 self.input_manager.force_cursor_mode()
                 return

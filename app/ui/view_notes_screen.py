@@ -1,62 +1,87 @@
-from PyQt6.QtWidgets import QWidget, QVBoxLayout, QLabel, QTextEdit
+from PyQt6.QtWidgets import QWidget, QVBoxLayout, QLabel, QScrollArea, QWidget
 from PyQt6.QtCore import Qt
-import os
-
-from app.state.app_state import AppState
 from app.ui.widgets.back_button import BackButton
-
+from app.ui.widgets.note_item import NoteItem
+from app.state.app_state import AppState
+import os
+from PyQt6.QtWidgets import QTextEdit
 
 class ViewNotesScreen(QWidget):
+
     def __init__(self, parent=None):
         super().__init__(parent)
 
-        layout = QVBoxLayout()
+        self.layout = QVBoxLayout()
+        self.layout.setContentsMargins(60,40,60,40)
+        self.layout.setSpacing(20)
 
-        title = QLabel("View Notes")
+        title = QLabel("Saved Notes")
         title.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        title.setStyleSheet("""
-            font-size: 32px;
-            font-weight: bold;
-        """)
-
-        layout.addWidget(title)
-
-        # ---------- NOTES DISPLAY ----------
-        self.notes_area = QTextEdit()
-        self.notes_area.setReadOnly(True)
-        self.notes_area.setStyleSheet("""
-            font-size: 24px;
-            padding: 20px;
-        """)
-
-        layout.addWidget(self.notes_area)
-
-        self.setLayout(layout)
+        title.setStyleSheet("font-size:34px; font-weight:600;")
+        self.layout.addWidget(title)
 
         self.back_button = BackButton(self)
-        self.back_button.move(20, 20)
-        self.back_button.show()
+        self.back_button.move(20,20)
+
+        # scroll area
+        self.scroll = QScrollArea()
+        self.scroll.setWidgetResizable(True)
+        
+        
+        self.list_container = QWidget()
+        self.list_layout = QVBoxLayout()
+        self.list_layout.setSpacing(15)
+
+        self.list_container.setLayout(self.list_layout)
+        self.scroll.setWidget(self.list_container)
+
+        self.layout.addWidget(self.scroll)
+        self.viewer = QTextEdit()
+        self.viewer.setReadOnly(True)
+        self.viewer.setStyleSheet("font-size:28px")
+        self.viewer.hide()
+        self.layout.addWidget(self.viewer)
+
+        
+        self.setLayout(self.layout)
+
+        self.note_items = []
     # -------------------------------------------------
     # LOAD NOTES FOR CURRENT USER
     # -------------------------------------------------
     def load_notes(self):
 
-        user_id = AppState.current_user
-        base_dir = os.path.join("assets", "notes", user_id)
+        # clear old items
+        for item in self.note_items:
+            item.deleteLater()
 
-        if not os.path.exists(base_dir):
-            self.notes_area.setPlainText("No notes found.")
+        self.note_items = []
+
+        user = AppState.current_user
+        path = os.path.join("assets","notes",user)
+
+        if not os.path.exists(path):
             return
 
-        notes_text = ""
+        files = sorted(os.listdir(path), reverse=True)
 
-        for file in sorted(os.listdir(base_dir)):
-            filepath = os.path.join(base_dir, file)
+        for f in files:
 
-            with open(filepath, "r", encoding="utf-8") as f:
-                content = f.read()
+            item = NoteItem(f, path, self)
 
-            notes_text += f"\n----- {file} -----\n"
-            notes_text += content + "\n"
+            self.list_layout.addWidget(item)
 
-        self.notes_area.setPlainText(notes_text)
+            self.note_items.append(item)
+    
+    def show_note(self, text):
+
+        self.scroll.hide()
+
+        # show viewer
+        self.viewer.setPlainText(text)
+        self.viewer.show()
+
+    def show_list(self):
+        self.viewer.clear()
+        self.viewer.hide()
+        self.scroll.show()
