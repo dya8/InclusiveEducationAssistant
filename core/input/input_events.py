@@ -46,3 +46,5 @@ class Action(Enum):
     SAVE_NOTE = auto()         
     CLEAR_TEXT = auto()
     DELETE_NOTE = auto()
+    DWELL_UP = auto()
+    DWELL_DOWN = auto()

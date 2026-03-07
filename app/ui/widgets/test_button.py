@@ -19,6 +19,12 @@ class TestButton(FocusableWidget):
         if self.objectName() == "ViewNotes":
             return Action.OPEN_VIEW_NOTES
         
+        if self.objectName() == "DwellUp":
+            return Action.DWELL_UP
+
+        if self.objectName() == "DwellDown":
+            return Action.DWELL_DOWN
+        
         return Action.NONE
 
 

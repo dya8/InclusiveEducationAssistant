@@ -748,6 +748,27 @@ class MainWindow(QMainWindow):
             )
             self.current_focus = None
             return
+        
+        if action == Action.DWELL_UP:
+            self.dwell_manager.increase()
+            self.dwell_manager.reset()
+
+            self.home_screen.dwell_label.setText(
+                f"Dwell: {self.dwell_manager.dwell_time:.1f} s"
+            )
+
+            return
+
+        if action == Action.DWELL_DOWN:
+            self.dwell_manager.decrease()
+            self.dwell_manager.reset()
+
+            self.home_screen.dwell_label.setText(
+                f"Dwell: {self.dwell_manager.dwell_time:.1f} s"
+            )
+
+            return
+        
         # ---------- GENERIC SELECT HANDLER ----------
         if action == Action.SELECT and self.current_focus:
             result = self.current_focus.select()
