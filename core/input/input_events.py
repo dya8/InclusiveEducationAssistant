@@ -45,3 +45,4 @@ class Action(Enum):
     OPEN_VIEW_NOTES = auto()   
     SAVE_NOTE = auto()         
     CLEAR_TEXT = auto()
+    DELETE_NOTE = auto()

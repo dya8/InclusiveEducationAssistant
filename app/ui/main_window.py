@@ -388,6 +388,11 @@ class MainWindow(QMainWindow):
             if isinstance(result, Action) and result == Action.BACK:
                 self.handle_action(result)
                 return
+            
+             # HANDLE DELETE BUTTON
+            '''if isinstance(result, Action) and result == Action.DELETE_NOTE:
+                self.handle_action(result)
+                return'''
 
             # ==================================================
             # 2️⃣ SUGGESTION BUTTON (returns string)
@@ -513,23 +518,15 @@ class MainWindow(QMainWindow):
                 with open(path, "r", encoding="utf-8") as f:
                     text = f.read()
 
-                self.view_notes_screen.show_note(text)
-                return
-
-            if action_type == "DELETE_NOTE":
-
-                if os.path.exists(path):
-                    os.remove(path)
-
-                self.view_notes_screen.load_notes()
-
-                # refresh focusables
-                self.focusables = (
-                    self.view_notes_screen.note_items
-                    + [self.view_notes_screen.back_button]
-                )
+                self.view_notes_screen.show_note(text,path)
+                # change focus to delete + back
+                self.focusables = [
+                    self.view_notes_screen.delete_button,
+                    self.view_notes_screen.back_button
+                ]
 
                 return
+            
         if action == Action.NONE:
             return
         # ==================================================
@@ -729,12 +726,28 @@ class MainWindow(QMainWindow):
         if action == Action.OPEN_VIEW_NOTES:
             self.switch_state(AppState.VIEW_NOTES)
             return
+        
         if action == Action.SAVE_NOTE:
             print("SAVE ACTION TRIGGERED")
             self.notes_screen.save_note()
             self.switch_state(AppState.HOME)
             return
+        
+        if action == Action.DELETE_NOTE:
+            path = self.view_notes_screen.current_note_path
 
+            if os.path.exists(path):
+                os.remove(path)
+
+            self.view_notes_screen.load_notes()
+            self.view_notes_screen.show_list()
+
+            self.focusables = (
+                self.view_notes_screen.note_items
+                + [self.view_notes_screen.back_button]
+            )
+            self.current_focus = None
+            return
         # ---------- GENERIC SELECT HANDLER ----------
         if action == Action.SELECT and self.current_focus:
             result = self.current_focus.select()

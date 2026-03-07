@@ -4,7 +4,10 @@ from app.ui.widgets.back_button import BackButton
 from app.ui.widgets.note_item import NoteItem
 from app.state.app_state import AppState
 import os
+from core.input.input_events import Action
 from PyQt6.QtWidgets import QTextEdit
+from app.ui.widgets.test_button import TestButton
+from app.ui.widgets.delete_button import DeleteButton
 
 class ViewNotesScreen(QWidget):
 
@@ -42,8 +45,11 @@ class ViewNotesScreen(QWidget):
         self.viewer.hide()
         self.layout.addWidget(self.viewer)
 
-        
+        self.delete_button = DeleteButton(self)
+        self.delete_button.move(950,20)
+        self.delete_button.hide()
         self.setLayout(self.layout)
+        
 
         self.note_items = []
     # -------------------------------------------------
@@ -73,15 +79,21 @@ class ViewNotesScreen(QWidget):
 
             self.note_items.append(item)
     
-    def show_note(self, text):
+    def show_note(self, text,path):
 
+        self.current_note_path = path
         self.scroll.hide()
-
+        
         # show viewer
         self.viewer.setPlainText(text)
         self.viewer.show()
+        self.delete_button.show()
+        self.delete_button.raise_()
+        
 
     def show_list(self):
         self.viewer.clear()
         self.viewer.hide()
+        self.delete_button.hide()
+
         self.scroll.show()
