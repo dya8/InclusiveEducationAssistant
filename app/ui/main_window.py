@@ -311,6 +311,8 @@ class MainWindow(QMainWindow):
         self.cursor_y += dy_s * self.CURSOR_GAIN_Y
 
         self.cursor_controller.move_to(self.cursor_x, self.cursor_y)
+        # 🔥 KEEP CURSOR ABOVE KEYBOARD
+        self.eye_cursor.raise_()
 
 
         # ---------- ACTION ----------
@@ -324,15 +326,34 @@ class MainWindow(QMainWindow):
         self.update_focus()
 
 
-        #THIS IS THE ONLY SELECTION LOGIC
+# ================= BLINK SELECT =================
         if action == Action.SELECT and self.current_focus:
-           result = self.current_focus.select()
-           self.handle_action(result)
-           self.dwell_manager.reset()
-           return
-        
-        self.handle_action(action)
-        
+
+            result = self.current_focus.select()
+
+            # ================= NOTES TYPING =================
+            if (
+                self.current_state == AppState.NOTES
+                and self.notes_screen.typing_active
+            ):
+
+                kb_action, value = result
+
+                internal_action, internal_value = \
+                    self.notes_screen.keyboard.handle_key(kb_action, value)
+
+                if internal_action:
+                    self.notes_screen.handle_keyboard_action(
+                        internal_action,
+                        internal_value
+                    )
+
+                return
+
+
+            # ================= NORMAL =================
+            self.handle_action(result)
+            return
     def restore_normal_input(self):
         if self.current_state == AppState.HOME:
             self.focusables = self.home_screen.focusables
@@ -350,16 +371,59 @@ class MainWindow(QMainWindow):
             # 📋 CHOICE OVERLAY
             else:
                 self.focusables = self.notes_screen.choice_overlay.focusables
-
-        self.current_focus = None
-        self.dwell_manager.reset()
+        elif self.current_state == AppState.CODING:
+            self.focusables = list(self.coding_screen.focusables)
+            self.current_focus = None
+            self.dwell_manager.reset()
+            return
 
 
     # =====================================================
 
     def handle_action(self, action: Action):
         print("Handling action:", action)
-        if action == Action.NONE:
+        # ==================================================
+# KEYBOARD CHARACTER INPUT
+# ==================================================
+
+        if isinstance(action, tuple):
+
+            kb_action, value = action
+
+            # ---------- NOTES KEYBOARD ----------
+            if self.current_state == AppState.NOTES:
+
+                kb_action, value = \
+                    self.notes_screen.keyboard.handle_key(kb_action, value)
+
+                if kb_action:
+                    self.notes_screen.handle_keyboard_action(kb_action, value)
+
+            # ---------- CODING SCREEN ----------
+            elif self.current_state == AppState.CODING:
+
+                if kb_action == Action.INSERT_CHAR:
+                    self.coding_screen.insert_text(value)
+
+                elif kb_action == Action.SPACE:
+                    self.coding_screen.insert_text(" ")
+
+                elif kb_action == Action.BACKSPACE:
+                    cursor = self.coding_screen.editor.textCursor()
+                    cursor.deletePreviousChar()
+                    self.coding_screen.editor.setTextCursor(cursor)
+
+            return
+        # ---------- INSERT CHARACTER FOR CODING ----------
+        if action == Action.INSERT_CHAR:
+
+            if self.current_state == AppState.CODING and self.current_focus:
+
+                value = getattr(self.current_focus, "value", None)
+
+                if value:
+                    self.coding_screen.insert_text(value)
+
             return
         # ==================================================
         # BACK BUTTON (GLOBAL)
@@ -378,6 +442,7 @@ class MainWindow(QMainWindow):
                 self.input_manager.reset()
                 self.restore_normal_input()
                 return
+        
 
             # 2️⃣ If inside NOTES → handle internal navigation
             if self.current_state == AppState.NOTES:
@@ -496,15 +561,39 @@ class MainWindow(QMainWindow):
             self.dwell_manager.reset()
             return
         if action == Action.OPEN_TYPING_KEYBOARD:
-            self.notes_screen.choice_overlay.hide()
-            self.notes_screen.keyboard.show()
-            self.notes_screen.typing_active = True
 
-            self.focusables = self.notes_screen.keyboard.focusables
-            self.current_focus = None
-            self.dwell_manager.reset()
-            return
+            if self.current_state == AppState.NOTES:
+                self.notes_screen.choice_overlay.hide()
+                self.notes_screen.keyboard.show()
+                self.notes_screen.typing_active = True
+                self.focusables = self.notes_screen.keyboard.focusables
 
+            '''elif self.current_state == AppState.CODING:
+
+                kb = self.coding_screen.keyboard
+                
+
+                # Make keyboard cover the entire window
+                kb.setParent(self)
+                kb.setGeometry(0, 0, self.width(), self.height())
+
+                kb.show()
+                kb.raise_()
+                
+                 # 🔥 FORCE CURSOR ABOVE KEYBOARD
+                self.eye_cursor.setParent(self)
+                self.eye_cursor.show()
+                self.eye_cursor.raise_()
+
+                self.coding_screen.typing_active = True
+                kb.build_main()
+               
+
+                self.focusables = kb.focusables
+
+                self.current_focus = None
+                self.dwell_manager.reset()
+                return'''
 
         # ---------- GENERIC SELECT HANDLER ----------
         if action == Action.SELECT and self.current_focus:
@@ -551,7 +640,9 @@ class MainWindow(QMainWindow):
     # =====================================================
 
     def update_focus(self):
-        cursor_pos = self.eye_cursor.pos
+        cursor_pos = self.eye_cursor.mapToGlobal(
+    self.eye_cursor.rect().center()
+)
         hit = None
 
         for w in self.focusables:
@@ -573,5 +664,32 @@ class MainWindow(QMainWindow):
             self.dwell_manager.reset()
 
         if hit and not isinstance(hit, KeyboardIcon):
-            progress, _ = self.dwell_manager.update(hit)
-            hit.update_dwell(progress)
+            #progress, _ = self.dwell_manager.update(hit)
+            hit.update_dwell(0)
+        
+        # detect if gaze cursor enters code editor
+        if (self.current_state == AppState.CODING ):#and not self.coding_screen.typing_active
+            editor_rect = QRect(
+                self.coding_screen.editor.mapToGlobal(
+                    self.coding_screen.editor.rect().topLeft()
+                ),
+                self.coding_screen.editor.size()
+            )
+
+            if editor_rect.contains(cursor_pos):
+
+                # hide green dot
+                self.eye_cursor.hide()
+
+                # convert gaze position → editor cursor
+                local_pos = self.coding_screen.editor.mapFromGlobal(cursor_pos)
+
+                cursor = self.coding_screen.editor.cursorForPosition(local_pos)
+                self.coding_screen.editor.setTextCursor(cursor)
+
+                # give editor focus → blinking cursor appears
+                self.coding_screen.editor.setFocus()
+
+                return
+            else:
+                self.eye_cursor.show()

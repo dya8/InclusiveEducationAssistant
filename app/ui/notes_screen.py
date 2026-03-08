@@ -9,15 +9,16 @@ from PyQt6.QtCore import Qt
 from core.input.input_events import Action
 from app.ui.widgets.input_choice import InputChoiceOverlay
 from app.ui.widgets.focusable import FocusableWidget
-from app.ui.widgets.typing_keyboard import TypingKeyboard
+from app.ui.widgets.coding_keyboard import CodingKeyboard
 from core.audio.stt import VoiceWorker
 from app.ui.widgets.mic_button import MicButton
 from core.input.input_events import Action
 from app.ui.widgets.back_button import BackButton
 
 class NotesScreen(QWidget):
-    def __init__(self, parent=None):
+    def __init__(self, parent=None , main_window=None):
         super().__init__(parent)
+        self.main_window = main_window
 
         # ---------- LAYOUT ----------
         layout = QVBoxLayout()
@@ -37,7 +38,7 @@ class NotesScreen(QWidget):
         self.choice_overlay.hide()
 
         # ---------- KEYBOARD ----------
-        self.keyboard = TypingKeyboard(self)
+        self.keyboard = CodingKeyboard(self, self.main_window)
         self.keyboard.hide()
         layout.addWidget(self.keyboard)
 
@@ -87,12 +88,12 @@ class NotesScreen(QWidget):
         self.mic_label.raise_()
 
         #====typing keyboard===
-        self.keyboard = TypingKeyboard(self)
+        self.keyboard = CodingKeyboard(self, self.main_window)
         self.keyboard.hide()
         layout.addWidget(self.keyboard)
 
         # ---------- FLAGS ----------
-        self.typing_active = False
+        self.typing_active = True
         self.back_button = BackButton(self)
         self.back_button.move(20, 20)
         self.back_button.show()

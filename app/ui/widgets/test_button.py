@@ -47,5 +47,10 @@ class TestButton(FocusableWidget):
 
     def select(self):
          return getattr(self, "action", Action.NONE)
+    def mousePressEvent(self, event):
+        if self.parent() and hasattr(self.parent(), "main_window"):
+            action = self.select()
+            self.parent().main_window.handle_action(action)
+    
 
 
