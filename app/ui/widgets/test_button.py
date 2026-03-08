@@ -48,9 +48,19 @@ class TestButton(FocusableWidget):
     def select(self):
          return getattr(self, "action", Action.NONE)
     def mousePressEvent(self, event):
+
+        if event.button() != Qt.MouseButton.LeftButton:
+            return
+
         if self.parent() and hasattr(self.parent(), "main_window"):
+
             action = self.select()
-            self.parent().main_window.handle_action(action)
+
+            # send keyboard tuple if value exists
+            if hasattr(self, "value"):
+                self.parent().main_window.handle_action((action, self.value))
+            else:
+                self.parent().main_window.handle_action(action)
     
 
 

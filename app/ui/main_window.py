@@ -403,10 +403,8 @@ class MainWindow(QMainWindow):
             elif self.current_state == AppState.CODING:
 
                 if kb_action == Action.INSERT_CHAR:
-                    self.coding_screen.insert_text(value)
-
-                elif kb_action == Action.SPACE:
-                    self.coding_screen.insert_text(" ")
+                    if value:
+                        self.coding_screen.insert_text(value)
 
                 elif kb_action == Action.BACKSPACE:
                     cursor = self.coding_screen.editor.textCursor()
@@ -687,8 +685,10 @@ class MainWindow(QMainWindow):
                 cursor = self.coding_screen.editor.cursorForPosition(local_pos)
                 self.coding_screen.editor.setTextCursor(cursor)
 
-                # give editor focus → blinking cursor appears
-                self.coding_screen.editor.setFocus()
+                # only focus if it is not already focused
+                if not self.coding_screen.editor.hasFocus():
+                    self.coding_screen.editor.setFocus()
+
 
                 return
             else:

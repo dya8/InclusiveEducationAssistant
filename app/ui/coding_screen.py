@@ -330,10 +330,10 @@ class CodingScreen(QWidget):
 
         # snippet map
         self.snippet_map = {
-            self.btn_print: "print()",
-            self.btn_if: "if:\n\t",
-            self.btn_for: "for i in range():\n\t",
-            self.btn_def: "def function():\n\t",
+            self.btn_print: "print(",
+            self.btn_if: "if:",
+            self.btn_for: "for i in range(",
+            self.btn_def: "def function(",
             self.btn_while: "while True:\n\t"
         }
 
@@ -341,16 +341,43 @@ class CodingScreen(QWidget):
         keyboard_layout = QGridLayout()
         bottom_layout.addLayout(keyboard_layout, 2)
 
+        self.keyboard_buttons = []
+
+        # ===== SPECIAL KEYS (TOP ROW) =====
+       
+        
+        backspace_btn = TestButton("⌫", self)
+        backspace_btn.setMinimumSize(120,70)
+        backspace_btn.action = Action.BACKSPACE
+        backspace_btn.value = None
+
+        space_btn = TestButton("SPACE", self)
+        space_btn.setMinimumSize(120,70)
+        space_btn.action = Action.INSERT_CHAR
+        space_btn.value = " "
+
+        enter_btn = TestButton("ENTER", self)
+        enter_btn.setMinimumSize(120,70)
+        enter_btn.action = Action.INSERT_CHAR
+        enter_btn.value = "\n"
+
+        
+
+        keyboard_layout.addWidget(backspace_btn, 0, 0)
+        keyboard_layout.addWidget(enter_btn, 0, 1)
+        keyboard_layout.addWidget(space_btn, 0, 2)
+
+        self.keyboard_buttons.extend([backspace_btn,enter_btn,space_btn])
+
+
+        # ===== NUMBER + SYMBOL KEYS =====
         keys = [
             ["1","2","3"],
             ["n","i","j"],
-            ["=","+","-"],
-            ["*","/","%"]
+            [":","+","-"],
+            ["*","/","="]
         ]
 
-        self.keyboard_buttons = []
-
-        # numeric + symbol rows
         for r, row in enumerate(keys):
             for c, key in enumerate(row):
 
@@ -360,30 +387,11 @@ class CodingScreen(QWidget):
                 btn.action = Action.INSERT_CHAR
                 btn.value = key
 
-                keyboard_layout.addWidget(btn, r, c)
+                keyboard_layout.addWidget(btn, r+1, c)   # r+1 because row 0 is special keys
 
                 self.keyboard_buttons.append(btn)
 
-        # ===== SPECIAL KEYS =====
-        space_btn = TestButton("SPACE", self)
-        space_btn.setMinimumSize(120,70)
-        space_btn.action = Action.INSERT_CHAR
-        space_btn.value = " "
 
-        tab_btn = TestButton("TAB", self)
-        tab_btn.setMinimumSize(120,70)
-        tab_btn.action = Action.INSERT_CHAR
-        tab_btn.value = "    "
-
-        clear_btn = TestButton("CLEAR", self)
-        clear_btn.setMinimumSize(120,70)
-        clear_btn.action = Action.CLEAR_OUTPUT
-
-        keyboard_layout.addWidget(space_btn, 4, 0)
-        keyboard_layout.addWidget(tab_btn, 4, 1)
-        keyboard_layout.addWidget(clear_btn, 4, 2)
-
-        self.keyboard_buttons += [space_btn, tab_btn, clear_btn]
 
         # ===== CONTROL BUTTONS =====
         control_layout = QHBoxLayout()
