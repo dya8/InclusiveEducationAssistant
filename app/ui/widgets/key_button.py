@@ -38,3 +38,4 @@ class KeyButton(FocusableWidget):
 
     def select(self):
         return self.action, self.value
+    

@@ -207,6 +207,7 @@ class NotesScreen(QWidget):
         QTimer.singleShot(3500, self.save_popup.hide)
         
     def save_note(self):
+        #self.text_buffer = self.text_area.toPlainText()
         if not self.text_buffer.strip():
             return
 

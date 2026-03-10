@@ -19,7 +19,7 @@ class FocusableWidget(QWidget):
         self.update()
 
     def select(self):
-        print("SELECTED:", self.objectName())
+        #print("SELECTED:", self.objectName())
         return None
     def paintEvent(self, event):
         super().paintEvent(event)

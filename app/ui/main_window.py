@@ -16,6 +16,7 @@ from core.input.input_events import Action, BlinkType
 from core.input.input_manager import InputManager
 from core.input.dwell_manager import DwellManager
 from app.ui.widgets.mic_button import MicButton
+from app.ui.coding.coding_screen import CodingScreen
 import os 
 import cv2
 from datetime import datetime
@@ -61,6 +62,9 @@ class MainWindow(QMainWindow):
         self.layout.addWidget(self.home_screen)
         self.notes_screen = NotesScreen(self)
         self.layout.addWidget(self.notes_screen)
+        # ---------- CODING SCREEN ----------
+        self.coding_screen = CodingScreen(self)
+        self.layout.addWidget(self.coding_screen)
         self.view_notes_screen = ViewNotesScreen(self)
         self.layout.addWidget(self.view_notes_screen)
         self.container.setLayout(self.layout)
@@ -198,7 +202,14 @@ class MainWindow(QMainWindow):
 
             return
 
-
+        if state == AppState.CODING:
+            self.layout.setCurrentWidget(self.coding_screen)
+            self.coding_screen.show_main()
+            self.focusables = list(self.coding_screen.focusables)
+            self.current_focus = None
+            self.dwell_manager.reset()
+            return
+        
     def save_new_user_face(self, frame):
     # Create base directory if not exists
 
@@ -527,6 +538,25 @@ class MainWindow(QMainWindow):
 
                 return
             
+            # ---------------- CODING SCREEN TUPLES ----------------
+            if self.current_state == AppState.CODING:
+
+                if action_type == Action.INSERT_CHAR:
+                    self.coding_screen.insert_text(path)
+                    return
+
+                if action_type == Action.INSERT_TEMPLATE:
+                    self.coding_screen.insert_text(path)
+                    return
+
+                if action_type == Action.OPEN_GROUP:
+                    self.coding_screen.keyboard.show_group(path)
+                    self.focusables = self.coding_screen.keyboard.focusables
+                    self.current_focus = None
+                    self.dwell_manager.reset()
+                    return
+                
+                
         if action == Action.NONE:
             return
         # ==================================================
@@ -670,7 +700,11 @@ class MainWindow(QMainWindow):
             self.dwell_manager.reset()
             return
 
-        
+        if action == Action.OPEN_CODING:
+            self.switch_state(AppState.CODING)
+            self.dwell_manager.reset()
+            return
+
         # ==================================================
         # HANDLE SELECT RESULTS (NO SELECTING HERE)
         # ==================================================
@@ -768,6 +802,72 @@ class MainWindow(QMainWindow):
             )
 
             return
+        
+        # ===============================
+        # CODING SCREEN ACTIONS
+        # ===============================
+
+        if self.current_state == AppState.CODING:
+
+            if action == Action.BACKSPACE:
+                self.coding_screen.backspace()
+                return
+
+            if action == Action.RUN_CODE:
+                self.coding_screen.run_code()
+                return
+
+            if action == Action.CLEAR_OUTPUT:
+                self.coding_screen.clear_output()
+                return
+
+            if action == Action.OPEN_CKEYBOARD:
+                self.coding_screen.show_keyboard()
+                self.focusables = self.coding_screen.focusables
+                self.current_focus = None
+                self.dwell_manager.reset()
+                return
+
+            if action == Action.CODING_MAIN:
+                self.coding_screen.show_templates()
+                self.focusables = self.coding_screen.focusables
+                return
+
+            if action == Action.OPEN_ALPHA:
+                self.coding_screen.keyboard.show_alpha()
+                self.focusables = self.coding_screen.keyboard.focusables
+                self.current_focus = None
+                self.dwell_manager.reset()
+                return
+
+            if action == Action.OPEN_NUM:
+                self.coding_screen.keyboard.show_num()
+                self.focusables = self.coding_screen.keyboard.focusables
+                self.current_focus = None
+                self.dwell_manager.reset()
+                return
+
+            if action == Action.OPEN_SYM:
+                self.coding_screen.keyboard.show_sym()
+                self.focusables = self.coding_screen.keyboard.focusables
+                self.current_focus = None
+                self.dwell_manager.reset()
+                return
+
+            
+            if action == Action.OPEN_MAIN:
+                self.coding_screen.show_main()
+                self.focusables = self.coding_screen.focusables
+                self.current_focus = None
+                self.dwell_manager.reset()
+                return
+            
+            if action == Action.OPEN_TEMPLATES:
+                self.coding_screen.show_templates()
+                self.focusables = self.coding_screen.focusables
+                self.current_focus = None
+                self.dwell_manager.reset()
+                return
         
         # ---------- GENERIC SELECT HANDLER ----------
         if action == Action.SELECT and self.current_focus:
