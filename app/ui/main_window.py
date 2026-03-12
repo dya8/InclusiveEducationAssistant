@@ -651,6 +651,11 @@ class MainWindow(QMainWindow):
                     return
                 
                 return
+            if self.current_state == AppState.CODING:
+                self.switch_state(AppState.HOME)
+                self.current_focus = None
+                self.input_manager.force_cursor_mode()
+                return
 
 
         # ---------- ROTATING KEYBOARD (ABSOLUTE PRIORITY) ----------
@@ -822,8 +827,17 @@ class MainWindow(QMainWindow):
                 return
 
             if action == Action.OPEN_CKEYBOARD:
-                self.coding_screen.show_keyboard()
-                self.focusables = self.coding_screen.focusables
+                # If we are currently in coding main → open keyboard panel
+                if self.coding_screen.panel_stack.currentWidget() != self.coding_screen.keyboard:
+
+                    self.coding_screen.show_keyboard()
+                    self.focusables = self.coding_screen.focusables
+
+                else:
+                    # Already inside keyboard → go back to keyboard main
+                    self.coding_screen.keyboard.show_main()
+                    self.focusables = self.coding_screen.keyboard.focusables
+
                 self.current_focus = None
                 self.dwell_manager.reset()
                 return

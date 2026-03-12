@@ -52,7 +52,7 @@ class CodingTemplates(QWidget):
 
         self.btn_back = CodingKeyButton(
             "Back",
-            Action.CODING_MAIN,
+            Action.OPEN_MAIN,
             None,
             self
         )
