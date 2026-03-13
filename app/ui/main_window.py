@@ -551,6 +551,7 @@ class MainWindow(QMainWindow):
 
                 if action_type == Action.OPEN_GROUP:
                     self.coding_screen.keyboard.show_group(path)
+                    self.coding_screen.update_focusables()
                     self.focusables = self.coding_screen.keyboard.focusables
                     self.current_focus = None
                     self.dwell_manager.reset()
@@ -831,6 +832,7 @@ class MainWindow(QMainWindow):
                 if self.coding_screen.panel_stack.currentWidget() != self.coding_screen.keyboard:
 
                     self.coding_screen.show_keyboard()
+                    self.coding_screen.update_focusables()
                     self.focusables = self.coding_screen.focusables
 
                 else:
@@ -849,6 +851,7 @@ class MainWindow(QMainWindow):
 
             if action == Action.OPEN_ALPHA:
                 self.coding_screen.keyboard.show_alpha()
+                self.coding_screen.update_focusables()
                 self.focusables = self.coding_screen.keyboard.focusables
                 self.current_focus = None
                 self.dwell_manager.reset()
@@ -856,6 +859,7 @@ class MainWindow(QMainWindow):
 
             if action == Action.OPEN_NUM:
                 self.coding_screen.keyboard.show_num()
+                self.coding_screen.update_focusables()
                 self.focusables = self.coding_screen.keyboard.focusables
                 self.current_focus = None
                 self.dwell_manager.reset()
@@ -863,6 +867,7 @@ class MainWindow(QMainWindow):
 
             if action == Action.OPEN_SYM:
                 self.coding_screen.keyboard.show_sym()
+                self.coding_screen.update_focusables()
                 self.focusables = self.coding_screen.keyboard.focusables
                 self.current_focus = None
                 self.dwell_manager.reset()
@@ -947,5 +952,8 @@ class MainWindow(QMainWindow):
             self.dwell_manager.reset()
 
         if hit and not isinstance(hit, KeyboardIcon):
+            # Disable dwell for coding screen
+            if self.current_state == AppState.CODING:
+                return
             progress, _ = self.dwell_manager.update(hit)
             hit.update_dwell(progress)

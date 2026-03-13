@@ -279,7 +279,7 @@ class CodingScreen(QWidget):
 
         self.output_console = QPlainTextEdit()
         self.output_console.setReadOnly(True)
-        self.output_console.setFont(QFont("Consolas", 12))
+        self.output_console.setFont(QFont("Consolas", 22))
         self.output_console.setStyleSheet(
             "background-color:#1e1e1e;color:#00ff00;"
         )

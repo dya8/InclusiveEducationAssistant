@@ -43,9 +43,9 @@ class TypingKeyboard(QWidget):
     def build_group_mode(self):
         self.clear_keys()
         save = KeyButton("SAVE", Action.SAVE_NOTE, None, self)
-        save.setMinimumSize(220, 320)
+        save.setMinimumSize(280, 340)
         save.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
-        save.setMinimumSize(220, 320)
+        save.setMinimumSize(280, 340)
         save.setStyleSheet("""
         background:#2ecc71;
         font-size:30px;
