@@ -6,7 +6,7 @@ from PyQt6.QtWidgets import (
     QHBoxLayout
 )
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QTextCursor
+from PyQt6.QtGui import QTextCursor,QColor,QPalette,QPainter,QPen
 from core.nlp.predictor import Predictor
 from core.input.input_events import Action
 from app.ui.widgets.input_choice import InputChoiceOverlay
@@ -23,6 +23,7 @@ from datetime import datetime
 from PyQt6.QtCore import QTimer
 from app.state.app_state import AppState
 from app.ui.widgets.save_button import SaveButton
+from core.audio.stt import VoiceWorker
 
 class NotesScreen(QWidget):
     def __init__(self, parent=None):

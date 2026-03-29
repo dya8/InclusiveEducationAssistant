@@ -17,6 +17,7 @@ from core.input.input_manager import InputManager
 from core.input.dwell_manager import DwellManager
 from app.ui.widgets.mic_button import MicButton
 from app.ui.coding.coding_screen import CodingScreen
+from app.ui.start_calibration_screen import StartCalibrationScreen
 import os 
 import cv2
 from datetime import datetime
@@ -44,6 +45,7 @@ class MainWindow(QMainWindow):
         self.login_screen = LoginScreen(self)
         self.calibration_screen = CalibrationScreen(self)
         self.home_screen = HomeScreen(self)
+        self.start_calibration_screen = StartCalibrationScreen(self)
         # ---- LOGIN SIGNALS ----
         self.login_screen.login_success.connect(self.on_login_success)
         self.login_screen.new_user_detected.connect(self.on_new_user)
@@ -61,6 +63,8 @@ class MainWindow(QMainWindow):
         self.layout.addWidget(self.calibration_screen)
         self.layout.addWidget(self.home_screen)
         self.notes_screen = NotesScreen(self)
+       
+        
         self.layout.addWidget(self.notes_screen)
         # ---------- CODING SCREEN ----------
         self.coding_screen = CodingScreen(self)
@@ -159,9 +163,13 @@ class MainWindow(QMainWindow):
         # ===============================
         # CALIBRATION
         # ===============================
+        if state == AppState.START_CALIBRATION:
+            self.layout.setCurrentWidget(self.start_calibration_screen)
+            return
         if state == AppState.CALIBRATION:
             self.layout.setCurrentWidget(self.calibration_screen)
             return
+        
 
         # ===============================
         # HOME
@@ -172,6 +180,7 @@ class MainWindow(QMainWindow):
 
             # 🔥 Critical: fresh list reference
             self.focusables = list(self.home_screen.focusables)
+            
             return
 
         # ===============================

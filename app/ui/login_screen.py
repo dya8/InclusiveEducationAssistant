@@ -1,6 +1,6 @@
 import cv2
 from PyQt6.QtWidgets import QWidget, QPushButton, QLabel, QVBoxLayout
-from PyQt6.QtCore import QTimer, pyqtSignal
+from PyQt6.QtCore import QTimer, pyqtSignal, Qt
 from PyQt6.QtGui import QImage, QPixmap
 from PyQt6.QtWidgets import QMessageBox
 from PyQt6.QtCore import QTimer
@@ -18,13 +18,55 @@ class LoginScreen(QWidget):
         super().__init__(parent)
 
         self.setWindowTitle("Face Login")
+        self.setStyleSheet("""
+            QWidget {
+                background-color: #1E1E2E;
+            }
+        """)
 
         self.video_label = QLabel()
+        self.video_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.video_label.setStyleSheet("""
+            QLabel {
+                background-color: #313244;
+                border-radius: 15px;
+                border: 2px solid #45475A;
+            }
+        """)
+        
         self.scan_button = QPushButton("Scan Face")
+        self.scan_button.setFixedSize(320, 60)
+        self.scan_button.setStyleSheet("""
+            QPushButton {
+                background-color: #89B4FA;
+                color: #1E1E2E;
+                font-size: 20px;
+                font-weight: bold;
+                border-radius: 30px;
+            }
+            QPushButton:hover {
+                background-color: #B4BEFE;
+            }
+        """)
 
         layout = QVBoxLayout()
+        layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.setSpacing(30)
+        
+        # Add a title label
+        self.title_label = QLabel("Welcome to Assistive Hub")
+        self.title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.title_label.setStyleSheet("""
+            font-size: 32px;
+            font-weight: bold;
+            color: #CDD6F4;
+            background: transparent;
+            margin-bottom: 20px;
+        """)
+        layout.addWidget(self.title_label)
+        
         layout.addWidget(self.video_label)
-        layout.addWidget(self.scan_button)
+        layout.addWidget(self.scan_button, alignment=Qt.AlignmentFlag.AlignCenter)
         self.setLayout(layout)
 
         self.cap = cv2.VideoCapture(0)
@@ -37,6 +79,27 @@ class LoginScreen(QWidget):
         self.current_frame = None
 
         self.scan_button.clicked.connect(self.scan_face)
+
+    def update_frame(self):
+        ret, frame = self.cap.read()
+        if not ret:
+            return
+
+        self.current_frame = frame
+
+        rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        h, w, ch = rgb.shape
+        bytes_per_line = ch * w
+
+        qt_image = QImage(
+            rgb.data,
+            w,
+            h,
+            bytes_per_line,
+            QImage.Format.Format_RGB888
+        )
+
+        self.video_label.setPixmap(QPixmap.fromImage(qt_image))
 
     def update_frame(self):
         ret, frame = self.cap.read()
