@@ -6,13 +6,14 @@ from core.input.input_events import (
     InputMode
 )
 
+from core.input.eog_reader import EOGDetector
 
 class InputManager:
     def __init__(self):
         self.last_action_time = 0.0   # ✅ MUST be float timestamp
         self.action_cooldown = 0.4    # seconds
         self.mode = InputMode.CURSOR
-
+        self.eog = EOGDetector()
     # ----------------------------------
 
     def _cooldown_ok(self) -> bool:
@@ -65,7 +66,26 @@ class InputManager:
                 return Action.KEYBOARD_ROTATE
 
             return Action.NONE
+        # ========== EOG FALLBACK ==========
+        if gaze == GazeDirection.CENTER and eog_signal is not None:
+            eog_action = self.eog.get_action()
 
+            if eog_action is not None and self._cooldown_ok():
+                self.last_action_time = time.time()
+
+                if self.mode == InputMode.CURSOR:
+                    if eog_action == "BLINK":
+                        return Action.SELECT
+                    elif eog_action == "LEFT":
+                        return Action.MOVE_LEFT
+                    elif eog_action == "RIGHT":
+                        return Action.MOVE_RIGHT
+
+                elif self.mode == InputMode.KEYBOARD:
+                    if eog_action == "BLINK":
+                        return Action.KEYBOARD_SELECT
+                    elif eog_action in ("LEFT", "RIGHT"):
+                        return Action.KEYBOARD_ROTATE
         # ========== CURSOR MODE ==========
         if self.mode == InputMode.CURSOR:
 

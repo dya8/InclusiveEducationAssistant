@@ -18,6 +18,8 @@ from core.input.dwell_manager import DwellManager
 from app.ui.widgets.mic_button import MicButton
 from app.ui.coding.coding_screen import CodingScreen
 import os 
+import keyboard
+import pyautogui
 import cv2
 from datetime import datetime
 from app.ui.view_notes_screen import ViewNotesScreen
@@ -51,7 +53,10 @@ class MainWindow(QMainWindow):
         #self.keyboard_icon.move(900,500)
         #self.keyboard_icon.show()
         #self.keyboard_icon.raise_()
-
+        #for eog
+        self.eog_override = False
+        self.manual_override=False
+        #
         self.focusables = self.home_screen.focusables
         self.focusables.append(self.keyboard_icon)
         self.current_focus = None
@@ -267,15 +272,121 @@ class MainWindow(QMainWindow):
     # =====================================================
 
     def update_input(self):
-        frame = self.camera.get_frame()
+        #for eog
+        if keyboard.is_pressed("e") and not self.eog_override:
+            print("EOG mode — look straight")
+            self.eog_override = True
+
+            # RESET calibration
+            self.input_manager.eog.baseline_h = None
+            self.input_manager.eog.baseline_v = None
+            if hasattr(self.input_manager.eog, "calib_samples"):
+                self.input_manager.eog.calib_samples = []
+
+        if keyboard.is_pressed("g"):
+            self.eog_override = False
+        
+        # -------- MANUAL MODE TOGGLE --------
+        if keyboard.is_pressed("m") and not self.manual_override:
+            print("Manual mode ON")
+            self.manual_override = True
+
+        if keyboard.is_pressed("n") and self.manual_override:
+            print("Manual mode OFF")
+            self.manual_override = False
+
+        # Mouse → cursor (always active)
+        '''screen_w, screen_h = pyautogui.size()
+        mx, my = pyautogui.position()
+
+        self.cursor_x = mx / screen_w
+        self.cursor_y = my / screen_h
+
+        self.cursor_controller.move_to(self.cursor_x, self.cursor_y)
+
+        # Right click → SELECT
+        if pyautogui.mouseDown(button='right'):
+            self.handle_action(Action.SELECT)'''
+        # -------- KEYBOARD FALLBACK --------
+        if self.manual_override:
+            step = 0.02 
+            # movement
+            if keyboard.is_pressed("left"):
+                self.cursor_x -= step
+
+            elif keyboard.is_pressed("right"):
+                self.cursor_x += step
+
+            elif keyboard.is_pressed("up"):
+                self.cursor_y -= step
+
+            elif keyboard.is_pressed("down"):
+                self.cursor_y += step
+            # clamp
+            self.cursor_x = max(0.0, min(1.0, self.cursor_x))
+            self.cursor_y = max(0.0, min(1.0, self.cursor_y))
+
+            #  move cursor (IMPORTANT)
+            self.cursor_controller.move_to(self.cursor_x, self.cursor_y)
+            self.update_focus()
+
+            # select
+            if keyboard.is_pressed("enter"):
+                self.handle_action(Action.SELECT)
+
+            return
+
+        # -------- KEYBOARD FALLBACK --------
+        if keyboard.is_pressed("esc"):
+            self.handle_action(Action.BACK)
+            return
+
+        if keyboard.is_pressed("r"):
+            self.handle_action(Action.OPEN_KEYBOARD)
+            return
+        #og
+        '''frame = self.camera.get_frame()
         if frame is None:
-            return
-
-        eyes = self.face_mesh.get_eye_landmarks(frame)
+            return'''
+        #for eog
+        if not self.eog_override:
+            frame = self.camera.get_frame()
+            if frame is None:
+                return
+        else:
+            frame = None
+        #
+        #og
+        '''eyes = self.face_mesh.get_eye_landmarks(frame)
         if not eyes:
-            return
+            return'''
+        #for eog
+        if not self.eog_override:
+            eyes = self.face_mesh.get_eye_landmarks(frame)
+            if not eyes:
+                return
+        if not self.eog_override:
+            # brighten eye images
+            left_eye = cv2.convertScaleAbs(eyes["left_eye_img"], alpha=1.5, beta=30)
+            right_eye = cv2.convertScaleAbs(eyes["right_eye_img"], alpha=1.5, beta=30)
 
-        # ---------- BLINK ----------
+            blink = self.blink_detector.update(
+                left_eye,
+                right_eye,
+                eyes["left_eye"],
+                eyes["right_eye"]
+            )
+            gx, gy = self.gaze_estimator.estimate(
+                eyes["left_eye"],
+                eyes["right_eye"],
+                eyes["left_iris"],
+                eyes["right_iris"]
+            )
+        else:
+            blink = BlinkType.NONE
+            gx,gy=None,None
+        #
+        '''# og---------- BLINK ----------
         blink = self.blink_detector.update(
             eyes["left_eye_img"],
             eyes["right_eye_img"],
@@ -283,13 +394,13 @@ class MainWindow(QMainWindow):
             eyes["right_eye"]
         )
 
-        # ---------- GAZE ----------
+        # og---------- GAZE ----------
         gx, gy = self.gaze_estimator.estimate(
             eyes["left_eye"],
             eyes["right_eye"],
             eyes["left_iris"],
             eyes["right_iris"]
-        )
+        )'''
 
         # ---------- CALIBRATION ----------
         if self.current_state == AppState.CALIBRATION:
@@ -330,8 +441,8 @@ class MainWindow(QMainWindow):
             return
 
 
-        # ---------- CURSOR ----------
-        mapped = self.gaze_calibration.map(gx, gy)
+        # og---------- CURSOR ----------
+        '''mapped = self.gaze_calibration.map(gx, gy)
         if mapped is None:
             return
 
@@ -354,7 +465,34 @@ class MainWindow(QMainWindow):
         self.cursor_x += dx_s * self.CURSOR_GAIN_X
         self.cursor_y += dy_s * self.CURSOR_GAIN_Y
 
-        self.cursor_controller.move_to(self.cursor_x, self.cursor_y)
+        self.cursor_controller.move_to(self.cursor_x, self.cursor_y)'''
+        #
+        #for eog
+        if not self.eog_override:
+            mapped = self.gaze_calibration.map(gx, gy)
+            if mapped is None:
+                return
+
+            cx, cy = mapped
+
+            dx = cx - self.gaze_calibration.center_screen_x
+            dy = cy - self.gaze_calibration.center_screen_y
+
+            if abs(dx) < self.DEAD_RADIUS_X:
+                cx = self.gaze_calibration.center_screen_x
+            if abs(dy) < self.DEAD_RADIUS_Y:
+                cy = self.gaze_calibration.center_screen_y
+
+            dx_s, dy_s = self.gaze_smoother.smooth(
+                cx - self.cursor_x,
+                cy - self.cursor_y
+            )
+
+            self.cursor_x += dx_s * self.CURSOR_GAIN_X
+            self.cursor_y += dy_s * self.CURSOR_GAIN_Y
+
+            self.cursor_controller.move_to(self.cursor_x, self.cursor_y)
+        #
         # ---------- EYE SCROLLING ----------
         if self.current_state == AppState.VIEW_NOTES:
 
@@ -373,11 +511,47 @@ class MainWindow(QMainWindow):
                     scrollbar.setValue(scrollbar.value() + 30)
                     self.last_scroll = time.time()
 
-        # ---------- ACTION ----------
-        action = self.input_manager.update(
+        # og---------- ACTION ----------
+        '''action = self.input_manager.update(
             gaze=None,     # gaze actions come later
             blink=blink
-        )
+        )'''
+        #
+
+        #for eog
+        if not self.eog_override:
+            action = self.input_manager.update(
+                gaze=None,
+                blink=blink
+            )
+        else:
+            action = Action.NONE
+
+        # 🔥 EOG override for eog
+        if self.eog_override:
+            eog_action = self.input_manager.eog.get_action()
+            print("EOG:", eog_action)
+
+            step = 0.03  # increase if needed
+
+            if eog_action == "RIGHT":
+                self.cursor_x += step
+
+            elif eog_action == "LEFT":
+                self.cursor_x -= step
+
+            elif eog_action == "BLINK":
+                self.handle_action(Action.SELECT)
+
+            # clamp cursor
+            self.cursor_x = max(0.0, min(1.0, self.cursor_x))
+            self.cursor_y = max(0.0, min(1.0, self.cursor_y))
+
+            # 🔥 ACTUAL MOVEMENT (THIS WAS MISSING)
+            self.cursor_controller.move_to(self.cursor_x, self.cursor_y)
+            self.update_focus()
+            return
+        #
 
         # DEBUG (remove after verification)
         print("ACTION:", action)
