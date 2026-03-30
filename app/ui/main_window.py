@@ -43,9 +43,13 @@ class MainWindow(QMainWindow):
         self.layout = QStackedLayout()
 
         self.login_screen = LoginScreen(self)
+        self.start_calibration_screen = StartCalibrationScreen(self)
+        self.start_calibration_screen.start_clicked.connect(
+    lambda: self.switch_state(AppState.CALIBRATION)
+)
         self.calibration_screen = CalibrationScreen(self)
         self.home_screen = HomeScreen(self)
-        self.start_calibration_screen = StartCalibrationScreen(self)
+        
         # ---- LOGIN SIGNALS ----
         self.login_screen.login_success.connect(self.on_login_success)
         self.login_screen.new_user_detected.connect(self.on_new_user)
@@ -60,6 +64,7 @@ class MainWindow(QMainWindow):
         self.dwell_manager = DwellManager()
 
         self.layout.addWidget(self.login_screen)
+        self.layout.addWidget(self.start_calibration_screen)
         self.layout.addWidget(self.calibration_screen)
         self.layout.addWidget(self.home_screen)
         self.notes_screen = NotesScreen(self)
@@ -251,7 +256,7 @@ class MainWindow(QMainWindow):
         print(f"[MainWindow] Login successful: {user_id}")
          # Store user if needed
         AppState.current_user = user_id  # optional
-        self.switch_state(AppState.CALIBRATION)
+        self.switch_state(AppState.START_CALIBRATION)
         self.calib_index = 0
         self.calib_start_time = None
 
@@ -283,15 +288,17 @@ class MainWindow(QMainWindow):
         eyes = self.face_mesh.get_eye_landmarks(frame)
         if not eyes:
             return
+        left_eye = cv2.convertScaleAbs(eyes["left_eye_img"], alpha=1.5, beta=30)
+        right_eye = cv2.convertScaleAbs(eyes["right_eye_img"], alpha=1.5, beta=30)
+        
 
         # ---------- BLINK ----------
         blink = self.blink_detector.update(
-            eyes["left_eye_img"],
-            eyes["right_eye_img"],
-            eyes["left_eye"],
-            eyes["right_eye"]
-        )
-
+                left_eye,
+                right_eye,
+                eyes["left_eye"],
+                eyes["right_eye"]
+            )
         # ---------- GAZE ----------
         gx, gy = self.gaze_estimator.estimate(
             eyes["left_eye"],

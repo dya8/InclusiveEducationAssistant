@@ -1,10 +1,11 @@
 from PyQt6.QtWidgets import QWidget, QLabel, QPushButton, QVBoxLayout
 from PyQt6.QtGui import QPixmap
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, pyqtSignal
 from app.state.app_state import AppState
 
 
 class StartCalibrationScreen(QWidget):
+    start_clicked = pyqtSignal()
     def __init__(self, main_window):
         super().__init__()
         self.main_window = main_window
@@ -23,7 +24,7 @@ class StartCalibrationScreen(QWidget):
 
         # -------- Eye Logo --------
         self.logo = QLabel()
-        pixmap = QPixmap("assets/images/eye_logo.png")
+        pixmap = QPixmap("assets/images/eye.jpeg")
         self.logo.setPixmap(
             pixmap.scaled(350, 220,
                           Qt.AspectRatioMode.KeepAspectRatio,
@@ -54,4 +55,4 @@ class StartCalibrationScreen(QWidget):
         layout.addWidget(self.start_button)
 
     def go_to_calibration(self):
-        self.main_window.switch_state(AppState.CALIBRATION)
+        self.start_clicked.emit()
